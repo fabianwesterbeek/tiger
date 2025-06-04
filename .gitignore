@@ -5,3 +5,5 @@ wandb
 trained_models/transformer*
 tl_out
 slurm_out
+.DS_Store
+.vscode/
