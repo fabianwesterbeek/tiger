@@ -187,6 +187,7 @@ def train(
         initial=start_iter,
         total=start_iter + iterations,
         disable=not accelerator.is_main_process,
+        mininterval=1.0,
     ) as pbar:
         for iter in range(iterations):
             model.train()
@@ -247,6 +248,7 @@ def train(
                     eval_dataloader,
                     desc=f"Eval {iter+1}",
                     disable=not accelerator.is_main_process,
+                    mininterval=1.0,
                 ) as pbar_eval:
                     for batch in pbar_eval:
                         data = batch_to(batch, device)

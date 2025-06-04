@@ -160,6 +160,7 @@ def train(
         initial=start_iter,
         total=start_iter + iterations,
         disable=not accelerator.is_main_process,
+        mininterval=1.0,
     ) as pbar:
         losses = [[], [], []]
         for iter in range(start_iter, start_iter + 1 + iterations):
@@ -226,7 +227,7 @@ def train(
             if do_eval and ((iter + 1) % eval_every == 0 or iter + 1 == iterations):
                 model.eval()
                 with tqdm(
-                    eval_dataloader, desc=f"Eval {iter+1}", disable=True
+                    eval_dataloader, desc=f"Eval {iter+1}", disable=True, mininterval=1.0
                 ) as pbar_eval:
                     eval_losses = [[], [], []]
                     for batch in pbar_eval:
