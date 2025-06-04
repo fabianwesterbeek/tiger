@@ -257,7 +257,7 @@ def train(
                     if not os.path.exists(save_dir_root):
                         os.makedirs(save_dir_root)
 
-                    torch.save(state, save_dir_root + f"checkpoint_{iter}.pt")
+                    torch.save(state, save_dir_root + f"checkpoint_{dataset_split}_{iter}.pt")
 
                 if (iter + 1) % eval_every == 0 or iter + 1 == iterations:
                     tokenizer.reset()
