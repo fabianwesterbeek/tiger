@@ -2,13 +2,15 @@
 
 
 ## 🧑‍💻 Team Members
-- Name 1 – email@example.com  
-- Name 2 – email@example.com  
-- Name 3 – email@example.com  
+
+- Fabian Weterbeek – fabian.westerbeek@student.uva.nl
+- Bhavesh Sood – bhavesh.sood@student.uva.nl 
+- Kshitiz Sharma – email@example.com
+- Maxim Voronin - maxim.voronin@student.uva.nl
 
 ## 👥 Supervising TAs
-- TA Name 1 (Main Supervisor)
-- TA Name 2 (Co-supervisor)
+- Yubao Tang (Main Supervisor)
+- Owen de Jong (Co-supervisor)
 
 
 ---
