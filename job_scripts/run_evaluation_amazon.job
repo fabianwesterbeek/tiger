@@ -16,4 +16,11 @@ module load CUDA/12.6.0
 
 source activate rq-vae
 
+echo "Evaluation: amazon-beauty"
 python train_decoder.py configs/decoder_amazon.gin
+
+echo "Evaluation: amazon-sports"
+python train_decoder.py configs/decoder_amazon_sports.gin
+
+echo "Evaluation: amazon-toys"
+python train_decoder.py configs/decoder_amazon_toys.gin

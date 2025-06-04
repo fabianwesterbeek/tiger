@@ -67,6 +67,7 @@ def train(
 ):
     if dataset != RecDataset.AMAZON:
         raise Exception(f"Dataset currently not supported: {dataset}.")
+    print(f"Starting training with dataset: {dataset}, split: {dataset_split}, category: {category}")
 
     if wandb_logging:
         params = locals()
@@ -75,6 +76,7 @@ def train(
         split_batches=split_batches,
         mixed_precision=mixed_precision_type if amp else "no",
     )
+    print(f"Initialized Accelerator with split_batches={split_batches} and mixed_precision={mixed_precision_type if amp else 'no'}")
 
     device = accelerator.device
 
@@ -98,6 +100,7 @@ def train(
             category=category,
         )
     )
+    print("Item dataset initialized.")
 
     train_dataset = SeqData(
         root=dataset_folder,
@@ -106,6 +109,7 @@ def train(
         subsample=train_data_subsample,
         split=dataset_split,
     )
+    print("Train dataset initialized.")
     eval_dataset = SeqData(
         root=dataset_folder,
         dataset=dataset,
@@ -113,6 +117,7 @@ def train(
         subsample=False,
         split=dataset_split,
     )
+    print("Evaluation dataset initialized.")
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
@@ -134,6 +139,7 @@ def train(
         rqvae_codebook_normalize=vae_codebook_normalize,
         rqvae_sim_vq=vae_sim_vq,
     )
+    print("Tokenizer initialized.")
     tokenizer = accelerator.prepare(tokenizer)
     tokenizer.precompute_corpus_ids(item_dataset)
 
@@ -176,6 +182,7 @@ def train(
     metrics_accumulator = TopKAccumulator(ks=[1, 5, 10])
     num_params = sum(p.numel() for p in model.parameters())
     print(f"Device: {device}, Num Parameters: {num_params}")
+    print("Starting training loop...")
     with tqdm(
         initial=start_iter,
         total=start_iter + iterations,
@@ -183,6 +190,7 @@ def train(
     ) as pbar:
         for iter in range(iterations):
             model.train()
+            print(f"Training iteration {iter + 1}/{iterations}")
             total_loss = 0
             optimizer.zero_grad()
             for _ in range(gradient_accumulate_every):
@@ -214,6 +222,7 @@ def train(
             if (iter + 1) % partial_eval_every == 0:
                 model.eval()
                 model.enable_generation = False
+                print(f"Performing partial evaluation at iteration {iter + 1}")
                 for batch in eval_dataloader:
                     data = batch_to(batch, device)
                     tokenized_data = tokenizer(data)
@@ -233,6 +242,7 @@ def train(
             if (iter + 1) % full_eval_every == 0:
                 model.eval()
                 model.enable_generation = True
+                print(f"Performing full evaluation at iteration {iter + 1}")
                 with tqdm(
                     eval_dataloader,
                     desc=f"Eval {iter+1}",
@@ -271,6 +281,7 @@ def train(
                         os.makedirs(save_dir_root)
 
                     torch.save(state, save_dir_root + f"checkpoint_{iter}.pt")
+                    print(f"Model checkpoint saved at iteration {iter + 1}")
 
                 if wandb_logging:
                     wandb.log(
