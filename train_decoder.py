@@ -143,6 +143,23 @@ def train(
     tokenizer = accelerator.prepare(tokenizer)
     tokenizer.precompute_corpus_ids(item_dataset)
 
+    # -- some debugging --
+    ## Debug information
+    print(f"Dataset split: {dataset_split}")
+    print(f"Max sequence length: {train_dataset.max_seq_len}")
+    print(f"Semantic IDs dimension: {tokenizer.sem_ids_dim}")
+    print(f"Maximum position encoding: {train_dataset.max_seq_len * tokenizer.sem_ids_dim}")
+
+    # Add a sanity check
+    assert train_dataset.max_seq_len * tokenizer.sem_ids_dim < 1025, (
+        f"Position encoding exceeds maximum allowed value. "
+        f"max_seq_len={train_dataset.max_seq_len}, "
+        f"sem_ids_dim={tokenizer.sem_ids_dim}, "
+        f"product={train_dataset.max_seq_len * tokenizer.sem_ids_dim}"
+    )
+
+    # -- end of debugging --
+
     if push_vae_to_hf:
         login()
         tokenizer.rq_vae.push_to_hub(vae_hf_model_name)
