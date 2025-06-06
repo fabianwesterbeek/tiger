@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# dataset_diagnostics.py - A comprehensive tool to diagnose dataset issues in RQ-VAE
+# dataset_diagnostics_improved.py - A comprehensive tool to diagnose dataset issues in RQ-VAE
 
 import os
 import argparse
@@ -10,6 +10,7 @@ from collections import defaultdict
 
 from data.processed import RecDataset, ItemData, SeqData
 from data.amazon import AmazonReviews
+from data.utils import batch_to
 from modules.tokenizer.semids import SemanticIdTokenizer
 
 
@@ -136,12 +137,19 @@ def analyze_amazon_dataset(dataset_folder, split, category="brand"):
             print(f"  - Sample user ids: {data['userId'][:5].tolist()}")
 
             if split_name == "train":
-                # For train split, we'll analyze sequence lengths
-                seq_lens = [len(seq) for seq in data["itemId"]]
-                print(f"  - Sequence lengths:")
-                print(f"    - Min: {min(seq_lens) if seq_lens else 'N/A'}")
-                print(f"    - Max: {max(seq_lens) if seq_lens else 'N/A'}")
-                print(f"    - Mean: {sum(seq_lens)/len(seq_lens) if seq_lens else 'N/A':.2f}")
+                # For train split, calculate sequence length stats safely
+                seq_lens = []
+                for seq in data["itemId"]:
+                    if hasattr(seq, "__len__"):  # Check if sequence has length
+                        seq_lens.append(len(seq))
+
+                if seq_lens:
+                    print(f"  - Sequence lengths:")
+                    print(f"    - Min: {min(seq_lens)}")
+                    print(f"    - Max: {max(seq_lens)}")
+                    print(f"    - Mean: {sum(seq_lens)/len(seq_lens):.2f}")
+                else:
+                    print("  - Couldn't analyze sequence lengths")
 
         # Check item features
         item_data = raw_dataset.data["item"]
@@ -214,13 +222,18 @@ def analyze_processed_dataset(dataset_folder, split, category="brand"):
 
                 # Check for potential indexing issues
                 item_count = train_dataset.item_data.shape[0]
-                max_id_in_sequence = max([seq.max().item() for seq in train_dataset.sequence_data["itemId"] if len(seq) > 0] + [-1])
+
+                # Find maximum item ID in sequences safely
+                max_id = -1
+                for seq in train_dataset.sequence_data["itemId"]:
+                    if isinstance(seq, list) and seq:
+                        max_id = max(max_id, max(seq))
 
                 print(f"  - Item count: {item_count}")
-                print(f"  - Max item ID in sequences: {max_id_in_sequence}")
+                print(f"  - Max item ID in sequences: {max_id}")
 
-                if max_id_in_sequence >= item_count:
-                    print(f"  - WARNING: Maximum item ID ({max_id_in_sequence}) is ≥ item count ({item_count})!")
+                if max_id >= item_count:
+                    print(f"  - WARNING: Maximum item ID ({max_id}) is ≥ item count ({item_count})!")
                     print(f"    This will cause an index out of bounds error in training/evaluation.")
 
             # Sample a sequence
@@ -229,7 +242,8 @@ def analyze_processed_dataset(dataset_folder, split, category="brand"):
                 try:
                     sample_seq = train_dataset[0]
                     print(f"    - User IDs: {sample_seq.user_ids}")
-                    print(f"    - Item IDs shape: {sample_seq.ids.shape}")
+                    print(f"    - Item IDs: {sample_seq.ids}")
+                    print(f"    - Item IDs min/max: {sample_seq.ids.min()}/{sample_seq.ids.max()}")
                     print(f"    - Item features shape: {sample_seq.x.shape}")
                     print(f"    - Future item ID: {sample_seq.ids_fut}")
                     print(f"    - Sequence mask shape: {sample_seq.seq_mask.shape}")
@@ -238,6 +252,8 @@ def analyze_processed_dataset(dataset_folder, split, category="brand"):
                     print(f"    - ERROR sampling train sequence: {str(e)}")
         except Exception as e:
             print(f"ERROR initializing train SeqData: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
         # Initialize eval SeqData
         print("\nInitializing Eval SeqData (is_train=False)...")
@@ -260,9 +276,9 @@ def analyze_processed_dataset(dataset_folder, split, category="brand"):
                 print(f"  - Item brand ID shape: {eval_dataset.item_brand_id.shape}")
                 print(f"  - Item data shape: {eval_dataset.item_data.shape}")
 
-                # Check for potential indexing issues
+                # Check for potential indexing issues safely
                 item_count = eval_dataset.item_data.shape[0]
-                max_id_in_sequence = eval_dataset.sequence_data["itemId"].max().item()
+                max_id_in_sequence = eval_dataset.sequence_data["itemId"].max().item() if hasattr(eval_dataset.sequence_data["itemId"], "max") else -1
 
                 print(f"  - Item count: {item_count}")
                 print(f"  - Max item ID in sequences: {max_id_in_sequence}")
@@ -278,6 +294,7 @@ def analyze_processed_dataset(dataset_folder, split, category="brand"):
                     sample_seq = eval_dataset[0]
                     print(f"    - User IDs: {sample_seq.user_ids}")
                     print(f"    - Item IDs: {sample_seq.ids}")
+                    print(f"    - Item IDs min/max: {sample_seq.ids.min()}/{sample_seq.ids.max()}")
                     print(f"    - Item features shape: {sample_seq.x.shape}")
                     print(f"    - Future item ID: {sample_seq.ids_fut}")
                     print(f"    - Sequence mask shape: {sample_seq.seq_mask.shape}")
@@ -286,6 +303,8 @@ def analyze_processed_dataset(dataset_folder, split, category="brand"):
                     print(f"    - ERROR sampling eval sequence: {str(e)}")
         except Exception as e:
             print(f"ERROR initializing eval SeqData: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
         return item_dataset, train_dataset, eval_dataset
 
@@ -296,9 +315,9 @@ def analyze_processed_dataset(dataset_folder, split, category="brand"):
         return None, None, None
 
 
-def analyze_tokenizer(dataset_folder, split, item_dataset=None, category="brand"):
-    """Analyze the tokenizer and its interaction with the dataset"""
-    print_section(f"TOKENIZER ANALYSIS: {split}")
+def analyze_tokenizer_minimal(dataset_folder, split, category="brand"):
+    """Analyze the tokenizer with minimal operations to avoid errors"""
+    print_section(f"TOKENIZER ANALYSIS (MINIMAL): {split}")
 
     vae_input_dim = 768
     vae_hidden_dims = [512, 256, 128]
@@ -308,6 +327,13 @@ def analyze_tokenizer(dataset_folder, split, item_dataset=None, category="brand"
     vae_n_cat_feats = 0
 
     try:
+        # Check if the pretrained model exists
+        pretrained_path = f"out/rqvae/amazon/checkpoint_{split}_399999.pt"
+        if not os.path.exists(pretrained_path):
+            print(f"WARNING: Pretrained RQVAE weights don't exist at {pretrained_path}")
+            print("Skipping tokenizer initialization")
+            return None
+
         # Initialize tokenizer with same parameters as in train_decoder.py
         print("Initializing SemanticIdTokenizer...")
         tokenizer = SemanticIdTokenizer(
@@ -317,23 +343,11 @@ def analyze_tokenizer(dataset_folder, split, item_dataset=None, category="brand"
             codebook_size=vae_codebook_size,
             n_layers=vae_n_layers,
             n_cat_feats=vae_n_cat_feats,
-            rqvae_weights_path=f"out/rqvae/amazon/checkpoint_{split}_399999.pt"
+            rqvae_weights_path=pretrained_path
         )
 
         print(f"Tokenizer initialized successfully.")
         print(f"  - Semantic IDs dimension: {tokenizer.sem_ids_dim}")
-
-        # If we have the item dataset, let's try to precompute corpus IDs
-        if item_dataset is not None:
-            try:
-                print("\nPrecomputing corpus IDs...")
-                tokenizer.precompute_corpus_ids(item_dataset)
-                print(f"  - Corpus IDs precomputed successfully.")
-                print(f"  - Cached matrix shape: {tokenizer.cached_matrix.shape if hasattr(tokenizer, 'cached_matrix') else 'Not available'}")
-            except Exception as e:
-                print(f"  - ERROR precomputing corpus IDs: {str(e)}")
-                import traceback
-                traceback.print_exc()
 
         return tokenizer
 
@@ -344,57 +358,102 @@ def analyze_tokenizer(dataset_folder, split, item_dataset=None, category="brand"
         return None
 
 
-def simulate_decoder_training(split, train_dataset, tokenizer):
-    """Simulate the decoder training process to identify issues"""
-    print_section(f"TRAINING SIMULATION: {split}")
+def safe_dataloading_check(train_dataset, eval_dataset):
+    """Check if dataloaders can be created and data can be loaded safely"""
+    print_section("DATALOADER SAFETY CHECK")
 
-    if train_dataset is None or tokenizer is None:
-        print("Cannot simulate training: dataset or tokenizer is None")
+    from torch.utils.data import DataLoader
+
+    if train_dataset is not None:
+        print("Testing Train DataLoader:")
+        try:
+            train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+            print(f"  - Train DataLoader created successfully")
+
+            # Try getting one batch
+            batch = next(iter(train_loader))
+            print(f"  - Successfully retrieved batch from train loader")
+            print(f"  - Batch shapes:")
+            print(f"    - User IDs: {batch.user_ids.shape}")
+            print(f"    - Item IDs: {batch.ids.shape}")
+            print(f"    - Future Item IDs: {batch.ids_fut.shape}")
+
+            # Check for index errors (items that would cause out-of-bounds)
+            item_count = train_dataset.item_data.shape[0]
+            max_id = batch.ids.max().item()
+            print(f"  - Max item ID in batch: {max_id}, Item count: {item_count}")
+
+            if max_id >= item_count:
+                print(f"  - ERROR: Batch contains item ID ({max_id}) that exceeds item count ({item_count})")
+            else:
+                print(f"  - Indexing check passed")
+
+        except Exception as e:
+            print(f"  - ERROR with train DataLoader: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
+    if eval_dataset is not None:
+        print("\nTesting Eval DataLoader:")
+        try:
+            eval_loader = DataLoader(eval_dataset, batch_size=4, shuffle=True)
+            print(f"  - Eval DataLoader created successfully")
+
+            # Try getting one batch
+            batch = next(iter(eval_loader))
+            print(f"  - Successfully retrieved batch from eval loader")
+            print(f"  - Batch shapes:")
+            print(f"    - User IDs: {batch.user_ids.shape}")
+            print(f"    - Item IDs: {batch.ids.shape}")
+            print(f"    - Future Item IDs: {batch.ids_fut.shape}")
+
+            # Check for index errors (items that would cause out-of-bounds)
+            item_count = eval_dataset.item_data.shape[0]
+            max_id = batch.ids.max().item()
+            print(f"  - Max item ID in batch: {max_id}, Item count: {item_count}")
+
+            if max_id >= item_count:
+                print(f"  - ERROR: Batch contains item ID ({max_id}) that exceeds item count ({item_count})")
+            else:
+                print(f"  - Indexing check passed")
+
+        except Exception as e:
+            print(f"  - ERROR with eval DataLoader: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
+
+def analyze_tokenizer_with_corpus(split, item_dataset):
+    """Analyze tokenizer and corpus computations in isolation"""
+    print_section(f"TOKENIZER CORPUS ANALYSIS: {split}")
+
+    if item_dataset is None:
+        print("No item dataset available, skipping tokenizer corpus analysis")
         return
 
+    # Initialize just the VAE part for analysis
+    vae_input_dim = 768
+    vae_hidden_dims = [512, 256, 128]
+    vae_embed_dim = 32
+
     try:
-        # Create a simple dataloader
-        batch_size = 4  # Small batch for testing
-        from torch.utils.data import DataLoader
-        from data.utils import cycle, next_batch
+        # Check data properties
+        print("Item Dataset Analysis:")
+        print(f"  - Number of items: {len(item_dataset)}")
+        print(f"  - Feature dimension: {item_dataset.item_data.shape[1]}")
 
-        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        train_dataloader = cycle(train_dataloader)
-
-        print(f"Created training dataloader with batch_size={batch_size}")
-
-        # Simulate a few batches of training
-        print("\nSimulating 3 batches of processing:")
-        device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-
-        for i in range(3):
-            print(f"\nBatch {i+1}:")
+        # Sample a few items to check indices
+        for i in [0, 1, len(item_dataset)-1]:
             try:
-                # Get batch
-                data = next_batch(train_dataloader, device)
-                print(f"  - Batch data:")
-                print(f"    - User IDs shape: {data.user_ids.shape}")
-                print(f"    - Item IDs shape: {data.ids.shape}")
-                print(f"    - Future item IDs shape: {data.ids_fut.shape}")
-                print(f"    - Item features shape: {data.x.shape}")
-
-                # Tokenize data
-                print(f"  - Tokenizing batch...")
-                tokenized_data = tokenizer(data)
-                print(f"  - Tokenized data:")
-                print(f"    - Semantic IDs shape: {tokenized_data.sem_ids.shape}")
-                print(f"    - Future semantic IDs shape: {tokenized_data.sem_ids_fut.shape}")
-                print(f"    - Sequence mask shape: {tokenized_data.seq_mask.shape}")
-                print(f"    - Token type IDs shape: {tokenized_data.token_type_ids.shape}")
-
+                item = item_dataset[i]
+                print(f"  - Item {i}:")
+                print(f"    - IDs: {item.ids}")
+                print(f"    - Feature shape: {item.x.shape}")
             except Exception as e:
-                print(f"  - ERROR processing batch: {str(e)}")
-                import traceback
-                traceback.print_exc()
-                break
+                print(f"  - Error accessing item {i}: {str(e)}")
 
     except Exception as e:
-        print(f"ERROR simulating training: {str(e)}")
+        print(f"ERROR during tokenizer corpus analysis: {str(e)}")
         import traceback
         traceback.print_exc()
 
@@ -422,8 +481,9 @@ def main():
     item_dataset, train_dataset, eval_dataset = analyze_processed_dataset(
         args.dataset_folder, args.split, args.category
     )
-    tokenizer = analyze_tokenizer(args.dataset_folder, args.split, item_dataset, args.category)
-    simulate_decoder_training(args.split, train_dataset, tokenizer)
+    tokenizer = analyze_tokenizer_minimal(args.dataset_folder, args.split, args.category)
+    safe_dataloading_check(train_dataset, eval_dataset)
+    analyze_tokenizer_with_corpus(args.split, item_dataset)
 
 
 if __name__ == "__main__":
