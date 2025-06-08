@@ -121,7 +121,7 @@ def train(
 
     eval_dataset = SeqData(
         root=dataset_folder,
-        dataset=dataset
+        dataset=dataset,
         is_train= False,
         is_eval_split="eval",
         subsample=False,
@@ -132,7 +132,7 @@ def train(
 
     test_dataset = SeqData(
         root=dataset_folder,
-        dataset=dataset
+        dataset=dataset,
         is_train= False,
         is_eval_split="test",
         subsample=False,
@@ -147,10 +147,10 @@ def train(
 
     train_dataloader = cycle(train_dataloader)
     eval_dataloader = DataLoader(eval_dataset, batch_size=batch_size, shuffle=True)
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
     train_dataloader, eval_dataloader, test_dataloader = accelerator.prepare(
-    train_dataloader, eval_dataloader, test_dataloader
-)
+    train_dataloader, eval_dataloader, test_dataloader)
 
     tokenizer = SemanticIdTokenizer(
         input_dim=vae_input_dim,
@@ -219,6 +219,11 @@ def train(
         start_iter = checkpoint["iter"] + 1
 
     model, optimizer, lr_scheduler = accelerator.prepare(model, optimizer, lr_scheduler)
+
+
+    current_best = 0 
+    patience = 5
+    patience_counter = 0
 
     metrics_accumulator = TopKAccumulator(ks=[1, 5, 10])
     num_params = sum(p.numel() for p in model.parameters())
@@ -307,10 +312,36 @@ def train(
                 eval_metrics = metrics_accumulator.reduce()
 
                 print(eval_metrics)
+
+                patience_counter +=1
+
+                ## We can change the Early stopping metric
+                if eval_metrics["ndcg@5"] > current_best:
+                    current_best = eval_metrics["ndcg@5"]
+                    patience_counter = 0
+                    state = {
+                        "iter": iter,
+                        "model": model.state_dict(),
+                        "optimizer": optimizer.state_dict(),
+                        "scheduler": lr_scheduler.state_dict(),
+                    }
+
+                    if not os.path.exists(save_dir_root):
+                        os.makedirs(save_dir_root)
+
+                    torch.save(state, save_dir_root + f"checkpoint_{dataset_split}_best.pt")
+                    print(f"Saving Current Best Model")
+
                 if accelerator.is_main_process and wandb_logging:
                     wandb.log(eval_metrics)
 
                 metrics_accumulator.reset()
+
+                if patience_counter > patience:
+                    print("Early stopping. Done training")
+                    print(f"Best Eval NDCG@5:{current_best}")
+                    break
+
 
             if accelerator.is_main_process:
                 if  iter + 1 == iterations:
@@ -336,7 +367,40 @@ def train(
                         }
                     )
 
+
             pbar.update(1)
+
+    best_checkpoint_path = os.path.join(save_dir_root, f"checkpoint_{dataset_split}_best.pt")
+    state = torch.load(best_checkpoint_path, map_location=device)
+
+    model.load_state_dict(state["model"])
+    model.eval()
+    model.enable_generation = True
+    metrics_accumulator.reset()
+
+    print(f"Performing full evaluation at iteration {iter + 1}")
+    with tqdm(
+        test_dataloader,
+        desc=f"Eval {iter+1}",
+        disable=not accelerator.is_main_process,
+        mininterval=1.0,
+        ) as pbar_test:
+        for batch in pbar_test:
+            data = batch_to(batch, device)
+            tokenized_data = tokenizer(data)
+
+            generated = model.generate_next_sem_id(
+            tokenized_data, top_k=True, temperature=1
+            )
+            actual, top_k = tokenized_data.sem_ids_fut, generated.sem_ids
+            # add the tokinzer
+            metrics_accumulator.accumulate(
+                actual=actual, top_k=top_k, tokenizer=tokenizer
+            )
+
+        test_metrics = metrics_accumulator.reduce()
+        print("Final Test Metrics: ")
+        print(test_metrics)
 
     if wandb_logging:
         wandb.finish()
