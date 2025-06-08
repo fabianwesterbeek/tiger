@@ -192,9 +192,32 @@ class AmazonReviews(InMemoryDataset, PreprocessingMixin):
         # Save the brand mapping to the data object as well
         data["brand_mapping"] = self.brand_mapping
 
-        gen = torch.Generator()
-        gen.manual_seed(42)
-        data["item"].is_train = torch.rand(item_emb.shape[0], generator=gen) > 0.05
+
+        n_items = item_emb.shape[0]
+
+        def flatten(list_of_lists):
+            return [item for sublist in list_of_lists for item in sublist]
+
+        train_items = set(flatten(sequences["train"]["itemId"].to_list()))
+        eval_items = set(flatten(sequences["eval"]["itemId"].to_list()))
+        test_items = set(flatten(sequences["test"]["itemId"].to_list()))
+
+        is_train_mask = torch.zeros(n_items, dtype=torch.bool)
+        is_val_mask = torch.zeros(n_items, dtype=torch.bool)
+        is_test_mask = torch.zeros(n_items, dtype=torch.bool)
+
+        is_train_mask[list(train_items)] = True 
+        is_val_mask[list(eval_items)] = True
+        is_test_mask[list(test_items)] = True
+
+        data["item"].is_train = is_train_mask
+        data["item"].is_val = is_val_mask
+        data["item"].is_test = is_test_mask
+
+
+        #gen = torch.Generator()
+        #gen.manual_seed(42)
+        #data["item"].is_train = torch.rand(item_emb.shape[0], generator=gen) > 0.05
 
         self.save([data], self.processed_paths[0])
 

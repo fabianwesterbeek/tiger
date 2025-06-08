@@ -54,12 +54,24 @@ class ItemData(Dataset):
         if not os.path.exists(processed_data_path) or force_process:
             raw_data.process(max_seq_len=max_seq_len)
 
+        
         if train_test_split == "train":
             filt = raw_data.data["item"]["is_train"]
         elif train_test_split == "eval":
-            filt = ~raw_data.data["item"]["is_train"]
+            filt = raw_data.data["item"]["is_val"]
+        elif train_test_split == "test":
+            filt = raw_data.data["item"]["is_test"]
         elif train_test_split == "all":
             filt = torch.ones_like(raw_data.data["item"]["x"][:, 0], dtype=bool)
+        else:
+            raise ValueError(f"Unknown train_test_split: {train_test_split}")
+        
+        # if train_test_split == "train":
+        #     filt = raw_data.data["item"]["is_train"]
+        # elif train_test_split == "eval":
+        #     filt = ~raw_data.data["item"]["is_train"]
+        # elif train_test_split == "all":
+        #     filt = torch.ones_like(raw_data.data["item"]["x"][:, 0], dtype=bool)
 
         self.item_data, self.item_text, self.item_brand_id = (
             raw_data.data["item"]["x"][filt],
@@ -97,6 +109,7 @@ class SeqData(Dataset):
         subsample: bool = False,
         force_process: bool = False,
         dataset: RecDataset = RecDataset.ML_1M,
+        is_eval_split: str = "eval",
         **kwargs
     ) -> None:
 
@@ -110,8 +123,12 @@ class SeqData(Dataset):
         processed_data_path = raw_data.processed_paths[0]
         if not os.path.exists(processed_data_path) or force_process:
             raw_data.process(max_seq_len=max_seq_len)
+        
+        if is_train:
+            split = "train" 
+        else:
+            split = is_eval_split
 
-        split = "train" if is_train else "test"
         self.subsample = subsample
         self.sequence_data = raw_data.data[("user", "rated", "item")]["history"][split]
 

@@ -117,16 +117,40 @@ def train(
         subsample=False,
         split=dataset_split,
     )
+    
+
+    eval_dataset = SeqData(
+        root=dataset_folder,
+        dataset=dataset
+        is_train= False,
+        is_eval_split="eval",
+        subsample=False,
+        split=dataset_split,
+    )
     print("Evaluation dataset initialized.")
+
+
+    test_dataset = SeqData(
+        root=dataset_folder,
+        dataset=dataset
+        is_train= False,
+        is_eval_split="test",
+        subsample=False,
+        split=dataset_split,
+    )
+
+    print("Test dataset initialized")
+    
+
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
     train_dataloader = cycle(train_dataloader)
     eval_dataloader = DataLoader(eval_dataset, batch_size=batch_size, shuffle=True)
 
-    train_dataloader, eval_dataloader = accelerator.prepare(
-        train_dataloader, eval_dataloader
-    )
+    train_dataloader, eval_dataloader, test_dataloader = accelerator.prepare(
+    train_dataloader, eval_dataloader, test_dataloader
+)
 
     tokenizer = SemanticIdTokenizer(
         input_dim=vae_input_dim,
@@ -237,6 +261,7 @@ def train(
 
             accelerator.wait_for_everyone()
 
+
             if (iter + 1) % partial_eval_every == 0:
                 model.eval()
                 model.enable_generation = False
@@ -288,7 +313,7 @@ def train(
                 metrics_accumulator.reset()
 
             if accelerator.is_main_process:
-                if (iter + 1) % save_model_every == 0 or iter + 1 == iterations:
+                if  iter + 1 == iterations:
                     state = {
                         "iter": iter,
                         "model": model.state_dict(),
@@ -299,8 +324,8 @@ def train(
                     if not os.path.exists(save_dir_root):
                         os.makedirs(save_dir_root)
 
-                    torch.save(state, save_dir_root + f"checkpoint_{dataset_split}_{iter}.pt")
-                    print(f"Model checkpoint saved at iteration {iter + 1}")
+                    torch.save(state, save_dir_root + f"checkpoint_{dataset_split}_final.pt")
+                    print(f"Final Model Checkpoint Saved")
 
                 if wandb_logging:
                     wandb.log(
