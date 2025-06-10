@@ -5,7 +5,7 @@
 
 - Fabian Weterbeek – fabian.westerbeek@student.uva.nl
 - Bhavesh Sood – bhavesh.sood@student.uva.nl 
-- Kshitiz Sharma – email@example.com
+- Kshitiz Sharma – kshitiz.sharma2@student.uva.nl
 - Maxim Voronin - maxim.voronin@student.uva.nl
 
 ## 👥 Supervising TAs
