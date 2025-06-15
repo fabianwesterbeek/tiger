@@ -16,6 +16,8 @@ module load CUDA/12.6.0
 
 source activate rq-vae
 
+export WANDB_API_KEY=edd05c449d4d9e2e00420fe7cb17c80858a3de4f
+
 echo "Evaluation: amazon-beauty"
 python train_decoder.py configs/decoder_amazon.gin
 

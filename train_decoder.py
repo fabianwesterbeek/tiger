@@ -12,7 +12,9 @@ from data.utils import batch_to
 from data.utils import cycle
 from data.utils import next_batch
 from evaluate.metrics import TopKAccumulator
-from modules.model import EncoderDecoderRetrievalModel
+# from modules.model import EncoderDecoderRetrievalModel
+from modules.model_ext import EncoderDecoderRetrievalModelExt as EncoderDecoderRetrievalModel
+from modules.model_ext import DecodingStrategy, DiversityFn
 from modules.scheduler.inv_sqrt import InverseSquareRootScheduler
 from modules.tokenizer.semids import SemanticIdTokenizer
 from modules.utils import compute_debug_metrics
@@ -23,6 +25,11 @@ from torch.utils.data import BatchSampler
 from torch.utils.data import DataLoader
 from torch.utils.data import RandomSampler
 from tqdm import tqdm
+
+
+torch.backends.cuda.enable_flash_sdp(False)
+torch.backends.cuda.enable_math_sdp(True)
+torch.backends.cuda.enable_mem_efficient_sdp(False)
 
 
 @gin.configurable
@@ -175,6 +182,14 @@ def train(
         sem_id_dim=tokenizer.sem_ids_dim,
         max_pos=train_dataset.max_seq_len * tokenizer.sem_ids_dim,
         jagged_mode=model_jagged_mode,
+
+        # extended decoding config:
+        decoding_strategy=DecodingStrategy.DIVERSE_BEAM,
+        beam_width=16,
+        num_groups=4,
+        diversity_strength=0.6,
+        diversity_fn=DiversityFn.NGRAM,
+        ngram_n=3,
     )
 
     optimizer = AdamW(

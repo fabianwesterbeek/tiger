@@ -9,6 +9,8 @@ from torch.nested import Tensor as NestedTensor
 from typing import Optional
 from typing import Union
 
+import math
+
 torch.backends.cuda.enable_flash_sdp(True)
 
 AttentionInput = Union[Tensor, NestedTensor]
@@ -118,21 +120,55 @@ class Attend(nn.Module):
         self.d_out = d_out
         self.dropout = dropout
 
+    # def jagged_forward(
+    #     self, qu: NestedTensor, ke: NestedTensor, va: NestedTensor, is_causal: bool
+    # ) -> NestedTensor:
+    #     queries = qu.unflatten(-1, [self.num_heads, self.head_dim]).transpose(1, 2)
+    #     keys = ke.unflatten(-1, [self.num_heads, self.head_dim]).transpose(1, 2)
+    #     values = va.unflatten(-1, [self.num_heads, self.head_dim]).transpose(1, 2)
+
+    #     dropout_p = 0.0 if not self.training else self.dropout
+
+    #     context_vec = F.scaled_dot_product_attention(
+    #         queries, keys, values, dropout_p=dropout_p, is_causal=is_causal
+    #     )
+
+    #     context_vec = context_vec.transpose(1, 2).flatten(-2)
+    #     return context_vec
+
     def jagged_forward(
         self, qu: NestedTensor, ke: NestedTensor, va: NestedTensor, is_causal: bool
     ) -> NestedTensor:
-        queries = qu.unflatten(-1, [self.num_heads, self.head_dim]).transpose(1, 2)
-        keys = ke.unflatten(-1, [self.num_heads, self.head_dim]).transpose(1, 2)
-        values = va.unflatten(-1, [self.num_heads, self.head_dim]).transpose(1, 2)
-
-        dropout_p = 0.0 if not self.training else self.dropout
-
-        context_vec = F.scaled_dot_product_attention(
-            queries, keys, values, dropout_p=dropout_p, is_causal=is_causal
-        )
-
+        # Convert NestedTensor → padded Tensor
+        q = qu.to_padded_tensor(0.0)
+        k = ke.to_padded_tensor(0.0)
+        v = va.to_padded_tensor(0.0)
+    
+        # Reshape for multi-head attention
+        q = q.unflatten(-1, [self.num_heads, self.head_dim]).transpose(1, 2)
+        k = k.unflatten(-1, [self.num_heads, self.head_dim]).transpose(1, 2)
+        v = v.unflatten(-1, [self.num_heads, self.head_dim]).transpose(1, 2)
+    
+        scale = 1.0 / math.sqrt(self.head_dim)
+        attn_scores = torch.matmul(q, k.transpose(-2, -1)) * scale
+    
+        if is_causal:
+            mask = torch.triu(
+                torch.ones_like(attn_scores, dtype=torch.bool), diagonal=1
+            )
+            attn_scores = attn_scores.masked_fill(mask, float('-inf'))
+    
+        attn_probs = F.softmax(attn_scores, dim=-1)
+        attn_probs = F.dropout(attn_probs, p=self.dropout, training=self.training)
+    
+        context_vec = torch.matmul(attn_probs, v)
         context_vec = context_vec.transpose(1, 2).flatten(-2)
+    
+        # Convert back to jagged (lengths are lost unless manually tracked)
         return context_vec
+
+
+
 
     def forward(self, qkv: Tensor, is_causal: bool = False) -> Tensor:
         batch_size, num_tokens, embed_dim = qkv.shape
