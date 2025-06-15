@@ -1,7 +1,7 @@
 import data.processed
 import modules.model
 
-train.iterations=200000
+train.iterations=0
 train.learning_rate=0.0003
 train.weight_decay=0.035
 train.batch_size=256
