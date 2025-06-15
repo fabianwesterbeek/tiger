@@ -21,8 +21,8 @@ export WANDB_API_KEY=edd05c449d4d9e2e00420fe7cb17c80858a3de4f
 echo "Evaluation: amazon-beauty"
 python train_decoder.py configs/decoder_amazon.gin
 
-echo "Evaluation: amazon-sports"
-python train_decoder.py configs/decoder_amazon_sports.gin
+# echo "Evaluation: amazon-sports"
+# python train_decoder.py configs/decoder_amazon_sports.gin
 
-echo "Evaluation: amazon-toys"
-python train_decoder.py configs/decoder_amazon_toys.gin
+# echo "Evaluation: amazon-toys"
+# python train_decoder.py configs/decoder_amazon_toys.gin
