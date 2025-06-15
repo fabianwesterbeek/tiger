@@ -92,7 +92,8 @@ class TopKAccumulator:
             pred_docs = top_k[b]
             for k in self.ks:
                 topk_pred = pred_docs[:k]
-                hits = sum(1 for doc in topk_pred if doc in gold_docs)
+                # hits = sum(1 for doc in topk_pred if doc in gold_docs)
+                hits = torch.any(torch.all(topk_pred == gold_docs, dim=1)).item() # fixed hit calculation
                 self.metrics[f"h@{k}"] += float(hits > 0)
                 self.metrics[f"ndcg@{k}"] += compute_ndcg_for_semantic_ids(
                     pred_docs, gold_docs, k
