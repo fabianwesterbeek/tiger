@@ -244,10 +244,10 @@ def train(
                 data = next_batch(train_dataloader, device)
                 tokenized_data = tokenizer(data)
 
-                with accelerator.autocast():
-                    model_output = model(tokenized_data)
-                    loss = model_output.loss / gradient_accumulate_every
-                    total_loss += loss
+                #with accelerator.autocast():
+                model_output = model(tokenized_data)
+                loss = model_output.loss / gradient_accumulate_every
+                total_loss += loss
 
                 if wandb_logging and accelerator.is_main_process:
                     train_debug_metrics = compute_debug_metrics(

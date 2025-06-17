@@ -26,7 +26,13 @@ class SemIdEmbedder(nn.Module):
         )
 
     def forward(self, batch: TokenizedSeqBatch) -> Tensor:
+        #print("Batch", batch)
         sem_ids = batch.token_type_ids * self.num_embeddings + batch.sem_ids
+        #if (sem_ids >= self.padding_idx).any() or (sem_ids < 0).any():
+        #    bad_ids = sem_ids[(sem_ids >= self.padding_idx) | (sem_ids < 0)]
+        #    print(f"Invalid sem_ids found! {bad_ids}")
+        #    raise ValueError("Invalid sem_ids for Embedding layer!")
+
         sem_ids[~batch.seq_mask] = self.padding_idx
 
         if batch.sem_ids_fut is not None:

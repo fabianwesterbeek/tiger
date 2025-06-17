@@ -176,6 +176,8 @@ def train(
     patience = 10
     patience_counter = 0
 
+    current_entropy = 0
+
     with tqdm(
         initial=start_iter,
         total=start_iter + iterations,
@@ -327,13 +329,28 @@ def train(
                     id_diversity_log["rqvae_entropy"] = rqvae_entropy.cpu().item()
                     id_diversity_log["max_id_duplicates"] = max_duplicates.cpu().item()
 
+
+                    if id_diversity_log["rqvae_entropy"] > current_entropy:
+                        current_entropy = id_diversity_log["rqvae_entropy"]
+                        state = {
+                            "iter": iter,
+                            "model": model.state_dict(),
+                            "model_config": model.config,
+                            "optimizer": optimizer.state_dict(),
+                        }
+
+                        if not os.path.exists(save_dir_root):
+                            os.makedirs(save_dir_root)
+
+                        torch.save(state, save_dir_root + f"checkpoint_{dataset_split}_best_entropy.pt")
+
                 if wandb_logging:
                     wandb.log({**train_log, **id_diversity_log})
 
             pbar.update(1)
 
     best_checkpoint_path = os.path.join(save_dir_root, f"checkpoint_{dataset_split}_best.pt")
-    state = torch.load(best_checkpoint_path, map_location=device)
+    state = torch.load(best_checkpoint_path, map_location=device, weights_only = False)
 
     model.load_state_dict(state["model"])
     model.eval()
@@ -345,14 +362,14 @@ def train(
             with torch.no_grad():
                 eval_model_output = model(data, gumbel_t=0.2)
 
-            eval_losses[0].append(eval_model_output.loss.cpu().item())
-            eval_losses[1].append(eval_model_output.reconstruction_loss.cpu().item())
-            eval_losses[2].append(eval_model_output.rqvae_loss.cpu().item())
+            test_losses[0].append(eval_model_output.loss.cpu().item())
+            test_losses[1].append(eval_model_output.reconstruction_loss.cpu().item())
+            test_losses[2].append(eval_model_output.rqvae_loss.cpu().item())
 
-    eval_losses = np.array(eval_losses).mean(axis=-1)
-    print(f"\nFinal Test Loss: {eval_losses[0]:.4f}")
-    print(f"Final Test Reconstruction Loss: {eval_losses[1]:.4f}")
-    print(f"Final Test VAE Loss: {eval_losses[2]:.4f}")
+    test_losses = np.array(test_losses).mean(axis=-1)
+    print(f"\nFinal Test Loss: {test_losses[0]:.4f}")
+    print(f"Final Test Reconstruction Loss: {test_losses[1]:.4f}")
+    print(f"Final Test VAE Loss: {test_losses[2]:.4f}")
 
     if wandb_logging:
         wandb.finish()
