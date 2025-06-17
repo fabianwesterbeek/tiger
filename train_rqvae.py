@@ -94,21 +94,6 @@ def train(
             batch_size=None,
             collate_fn=lambda batch: batch,
         )
-    
-    test_dataset = ItemData(
-            root=dataset_folder,
-            dataset=dataset,
-            force_process=False,
-            train_test_split="test",
-            split=dataset_split,
-        )
-    test_sampler = BatchSampler(RandomSampler(test_dataset), batch_size, False)
-    test_dataloader = DataLoader(
-            test_dataset,
-            sampler=test_sampler,
-            batch_size=None,
-            collate_fn=lambda batch: batch,
-        )   
 
     index_dataset = (
         ItemData(
@@ -171,13 +156,6 @@ def train(
     )
     tokenizer.rq_vae = model
 
-
-    current_loss = np.inf
-    patience = 10
-    patience_counter = 0
-
-    current_entropy = 0
-
     with tqdm(
         initial=start_iter,
         total=start_iter + iterations,
@@ -213,7 +191,7 @@ def train(
             losses[0] = losses[0][-1000:]
             losses[1] = losses[1][-1000:]
             losses[2] = losses[2][-1000:]
-            if iter % 1000 == 0:
+            if iter % 100 == 0:
                 print_loss = np.mean(losses[0])
                 print_rec_loss = np.mean(losses[1])
                 print_vae_loss = np.mean(losses[2])
@@ -268,33 +246,8 @@ def train(
                     id_diversity_log["eval_reconstruction_loss"] = eval_losses[1]
                     id_diversity_log["eval_rqvae_loss"] = eval_losses[2]
 
-                    patience_counter += 1
-
-                    if eval_losses[0] < current_loss:
-
-                        current_loss = eval_losses[0]
-                        patience_counter = 0
-
-                        state = {
-                            "iter": iter,
-                            "model": model.state_dict(),
-                            "model_config": model.config,
-                            "optimizer": optimizer.state_dict(),
-                        }
-
-                        if not os.path.exists(save_dir_root):
-                            os.makedirs(save_dir_root)
-
-                        torch.save(state, save_dir_root + f"checkpoint_{dataset_split}_best.pt")
-
-                    if patience_counter >= patience:
-                        print("Early stopping. Done training")
-                        print(f"Best Eval Loss:{current_loss}")
-                        break
-
-
             if accelerator.is_main_process:
-                if iter + 1 == iterations:
+                if (iter + 1) % save_model_every == 0 or iter + 1 == iterations:
                     state = {
                         "iter": iter,
                         "model": model.state_dict(),
@@ -305,7 +258,7 @@ def train(
                     if not os.path.exists(save_dir_root):
                         os.makedirs(save_dir_root)
 
-                    torch.save(state, save_dir_root + f"checkpoint_{dataset_split}_final.pt")
+                    torch.save(state, save_dir_root + f"checkpoint_{dataset_split}_{iter}.pt")
 
                 if (iter + 1) % eval_every == 0 or iter + 1 == iterations:
                     tokenizer.reset()
@@ -329,47 +282,10 @@ def train(
                     id_diversity_log["rqvae_entropy"] = rqvae_entropy.cpu().item()
                     id_diversity_log["max_id_duplicates"] = max_duplicates.cpu().item()
 
-
-                    if id_diversity_log["rqvae_entropy"] > current_entropy:
-                        current_entropy = id_diversity_log["rqvae_entropy"]
-                        state = {
-                            "iter": iter,
-                            "model": model.state_dict(),
-                            "model_config": model.config,
-                            "optimizer": optimizer.state_dict(),
-                        }
-
-                        if not os.path.exists(save_dir_root):
-                            os.makedirs(save_dir_root)
-
-                        torch.save(state, save_dir_root + f"checkpoint_{dataset_split}_best_entropy.pt")
-
                 if wandb_logging:
                     wandb.log({**train_log, **id_diversity_log})
 
             pbar.update(1)
-
-    best_checkpoint_path = os.path.join(save_dir_root, f"checkpoint_{dataset_split}_best.pt")
-    state = torch.load(best_checkpoint_path, map_location=device, weights_only = False)
-
-    model.load_state_dict(state["model"])
-    model.eval()
-
-    test_losses = [[], [], []]
-    with tqdm(test_dataloader, desc=f"Final Evaluation", mininterval=1.0) as pbar_eval:
-        for batch in pbar_eval:
-            data = batch_to(batch, device)
-            with torch.no_grad():
-                eval_model_output = model(data, gumbel_t=0.2)
-
-            test_losses[0].append(eval_model_output.loss.cpu().item())
-            test_losses[1].append(eval_model_output.reconstruction_loss.cpu().item())
-            test_losses[2].append(eval_model_output.rqvae_loss.cpu().item())
-
-    test_losses = np.array(test_losses).mean(axis=-1)
-    print(f"\nFinal Test Loss: {test_losses[0]:.4f}")
-    print(f"Final Test Reconstruction Loss: {test_losses[1]:.4f}")
-    print(f"Final Test VAE Loss: {test_losses[2]:.4f}")
 
     if wandb_logging:
         wandb.finish()

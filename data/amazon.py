@@ -192,38 +192,9 @@ class AmazonReviews(InMemoryDataset, PreprocessingMixin):
         # Save the brand mapping to the data object as well
         data["brand_mapping"] = self.brand_mapping
 
-
-        n_items = item_emb.shape[0]
-
         gen = torch.Generator()
         gen.manual_seed(42)
-
-        all_items = torch.randperm(n_items, generator=gen)
-
-        # Calculate split sizes
-        n_train = int(0.90 * n_items)
-        n_val = int(0.05 * n_items)
-        n_test = n_items - n_train - n_val 
-
-        train_items = all_items[:n_train]
-        val_items = all_items[n_train:n_train + n_val]
-        test_items = all_items[n_train + n_val:]
-
-        is_train_mask = torch.zeros(n_items, dtype=torch.bool)
-        is_val_mask = torch.zeros(n_items, dtype=torch.bool)
-        is_test_mask = torch.zeros(n_items, dtype=torch.bool)
-
-        is_train_mask[train_items] = True
-        is_val_mask[val_items] = True
-        is_test_mask[test_items] = True
-
-        data["item"].is_train = is_train_mask
-        data["item"].is_val = is_val_mask
-        data["item"].is_test = is_test_mask
-
-
-        
-        #data["item"].is_train = torch.rand(item_emb.shape[0], generator=gen) > 0.05
+        data["item"].is_train = torch.rand(item_emb.shape[0], generator=gen) > 0.05
 
         self.save([data], self.processed_paths[0])
 
