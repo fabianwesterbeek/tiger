@@ -167,6 +167,7 @@ class TopKAccumulator:
                         embedding = lookup_table.lookup(pred)
                         if embedding is not None:
                             embeddings.append(embedding)
+                            print(f"3cz appending embedding: {embedding}")
 
                     # Calculate ILD if we have at least 2 embeddings
                     if len(embeddings) >= 2:
