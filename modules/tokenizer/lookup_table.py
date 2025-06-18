@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from einops import rearrange
-from torch import nn
+import torch._dynamo
 from torch.utils.data import DataLoader, BatchSampler, SequentialSampler
 from data.utils import batch_to
 from modules.utils import eval_mode
@@ -74,6 +74,7 @@ class SemanticIDLookupTable(nn.Module):
 
         return len(self.id_to_embedding_map)
 
+    @torch._dynamo.disable
     def lookup(self, sem_id):
         """
         Get content embedding for a semantic ID
@@ -88,6 +89,7 @@ class SemanticIDLookupTable(nn.Module):
             sem_id = tuple(sem_id.detach().cpu().tolist())
         return self.id_to_embedding_map.get(sem_id)
 
+    @torch._dynamo.disable
     def batch_lookup(self, sem_ids):
         """
         Get content embeddings for multiple semantic IDs
@@ -110,6 +112,7 @@ class SemanticIDLookupTable(nn.Module):
 
         return torch.stack(results)
 
+    @torch._dynamo.disable
     def get_all_embeddings(self):
         """
         Get all embeddings in the lookup table

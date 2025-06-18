@@ -1,6 +1,7 @@
 from collections import defaultdict
 from torch import Tensor
 import torch
+import torch._dynamo
 import math
 from einops import rearrange
 import numpy as np
@@ -62,6 +63,8 @@ class GiniCoefficient:
         return self.gini_coefficient(list(freqs.values()))
 
 
+@torch._dynamo.disable
+@torch._dynamo.disable
 class IntraListDiversity:
     """
     A class to calculate intra-list diversity (ILD) using content embeddings.
