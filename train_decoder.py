@@ -323,6 +323,36 @@ def train(
 
             pbar.update(1)
 
+    # Always perform a full evaluation after training completes
+    model.eval()
+    model.enable_generation = True
+    print(f"Performing final full evaluation after training")
+    with tqdm(
+        eval_dataloader,
+        desc=f"Final Evaluation",
+        disable=not accelerator.is_main_process,
+        mininterval=1.0,
+    ) as pbar_eval:
+        for batch in pbar_eval:
+            data = batch_to(batch, device)
+            tokenized_data = tokenizer(data)
+
+            generated = model.generate_next_sem_id(
+                tokenized_data, top_k=True, temperature=1
+            )
+            actual, top_k = tokenized_data.sem_ids_fut, generated.sem_ids
+            # add the tokenizer and lookup table for ILD calculation
+            metrics_accumulator.accumulate(
+                actual=actual, top_k=top_k, tokenizer=tokenizer, lookup_table=lookup_table
+            )
+    final_eval_metrics = metrics_accumulator.reduce()
+
+    print(final_eval_metrics)
+    if accelerator.is_main_process and wandb_logging:
+        wandb.log({**final_eval_metrics, "final_evaluation": True})
+
+    metrics_accumulator.reset()
+
     if wandb_logging:
         wandb.finish()
 
