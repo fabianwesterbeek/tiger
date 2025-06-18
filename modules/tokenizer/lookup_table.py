@@ -1,13 +1,14 @@
 import torch
 import numpy as np
 from einops import rearrange
+from torch import nn
 from torch.utils.data import DataLoader, BatchSampler, SequentialSampler
 from data.utils import batch_to
 from modules.utils import eval_mode
 from modules.rqvae import RqVae
 
 
-class SemanticIDLookupTable:
+class SemanticIDLookupTable(nn.Module):
     """
     A lookup table that maps from semantic IDs to content embeddings.
     This allows efficient retrieval of content embeddings based on semantic IDs.
@@ -20,6 +21,7 @@ class SemanticIDLookupTable:
         Args:
             rqvae_model: An instance of the RqVae model used to generate embeddings
         """
+        super().__init__()
         self.rqvae = rqvae_model
         self.id_to_embedding_map = {}
         self.device = rqvae_model.device
