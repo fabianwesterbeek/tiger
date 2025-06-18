@@ -7,6 +7,10 @@ from einops import rearrange
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
+# Flag to disable ILD computation for debugging
+DISABLE_ILD = False
+
+
 
 def compute_dcg(relevance: list) -> float:
     return sum(rel / math.log2(idx + 2) for idx, rel in enumerate(relevance))
@@ -153,8 +157,8 @@ class TopKAccumulator:
                         list_gini, key="category"
                     )
 
-                # Calculate intra-list diversity if lookup table is provided
-                if lookup_table is not None:
+                # Calculate intra-list diversity if lookup table is provided and ILD is not disabled
+                if lookup_table is not None and not DISABLE_ILD:
                     # Get embeddings for the topk predictions
                     embeddings = []
                     for pred in topk_pred:
@@ -171,6 +175,9 @@ class TopKAccumulator:
                     else:
                         # If we have fewer than 2 embeddings, ILD is 0
                         self.metrics[f"ild@{k}"] += 0.0
+                elif lookup_table is not None and DISABLE_ILD:
+                    # When ILD is disabled, just set the metric to 0
+                    self.metrics[f"ild@{k}"] += 0.0
         self.total += B
 
     def reduce(self) -> dict:
