@@ -64,7 +64,6 @@ class GiniCoefficient:
 
 
 @torch._dynamo.disable
-@torch._dynamo.disable
 class IntraListDiversity:
     """
     A class to calculate intra-list diversity (ILD) using content embeddings.
@@ -72,6 +71,7 @@ class IntraListDiversity:
     Higher values indicate more diverse recommendations.
     """
 
+    @torch._dynamo.disable
     def calculate_ild(self, embeddings):
         """
         Compute the intra-list diversity of embeddings using cosine distance.
@@ -164,9 +164,10 @@ class TopKAccumulator:
 
                     # Calculate ILD if we have at least 2 embeddings
                     if len(embeddings) >= 2:
-                        embeddings_tensor = torch.stack(embeddings)
-                        ild_score = IntraListDiversity().calculate_ild(embeddings_tensor)
-                        self.metrics[f"ild@{k}"] += ild_score
+                        with torch._dynamo.disable():
+                            embeddings_tensor = torch.stack(embeddings)
+                            ild_score = IntraListDiversity().calculate_ild(embeddings_tensor)
+                            self.metrics[f"ild@{k}"] += ild_score
                     else:
                         # If we have fewer than 2 embeddings, ILD is 0
                         self.metrics[f"ild@{k}"] += 0.0
