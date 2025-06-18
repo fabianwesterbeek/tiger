@@ -4,6 +4,7 @@ import torch
 import math
 from einops import rearrange
 import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 def compute_dcg(relevance: list) -> float:
@@ -61,6 +62,46 @@ class GiniCoefficient:
         return self.gini_coefficient(list(freqs.values()))
 
 
+class IntraListDiversity:
+    """
+    A class to calculate intra-list diversity (ILD) using content embeddings.
+    ILD measures how diverse the items in a recommendation list are.
+    Higher values indicate more diverse recommendations.
+    """
+
+    def calculate_ild(self, embeddings):
+        """
+        Compute the intra-list diversity of embeddings using cosine distance.
+
+        Args:
+            embeddings: A tensor of shape [n, d] containing n embeddings of dimension d
+
+        Returns:
+            float: The intra-list diversity score (average pairwise cosine distance)
+        """
+        if len(embeddings) <= 1:
+            return 0.0
+
+        # Normalize embeddings for cosine similarity
+        normalized_embeddings = embeddings / (embeddings.norm(dim=1, keepdim=True) + 1e-8)
+
+        # Calculate pairwise cosine similarities
+        similarities = torch.mm(normalized_embeddings, normalized_embeddings.t())
+
+        # Convert similarities to distances (1 - similarity)
+        distances = 1.0 - similarities
+
+        # Zero out the diagonal (self-similarity)
+        n = distances.size(0)
+        distances.fill_diagonal_(0.0)
+
+        # Calculate average pairwise distance (upper triangular part only)
+        total_distance = distances.sum() / 2.0  # Divide by 2 to count each pair once
+        num_pairs = (n * (n - 1)) / 2.0
+
+        return (total_distance / num_pairs).item()
+
+
 class TopKAccumulator:
     def __init__(self, ks=[1, 5, 10]):
         self.ks = ks
@@ -70,7 +111,7 @@ class TopKAccumulator:
         self.total = 0
         self.metrics = defaultdict(float)
 
-    def accumulate(self, actual: Tensor, top_k: Tensor, tokenizer=None) -> None:
+    def accumulate(self, actual: Tensor, top_k: Tensor, tokenizer=None, lookup_table=None) -> None:
         B, D = actual.shape
         pos_match = rearrange(actual, "b d -> b 1 d") == top_k
         for i in range(D):
@@ -108,6 +149,24 @@ class TopKAccumulator:
                     self.metrics[f"gini@{k}"] += GiniCoefficient().calculate_list_gini(
                         list_gini, key="category"
                     )
+
+                # Calculate intra-list diversity if lookup table is provided
+                if lookup_table is not None:
+                    # Get embeddings for the topk predictions
+                    embeddings = []
+                    for pred in topk_pred:
+                        embedding = lookup_table.lookup(pred)
+                        if embedding is not None:
+                            embeddings.append(embedding)
+
+                    # Calculate ILD if we have at least 2 embeddings
+                    if len(embeddings) >= 2:
+                        embeddings_tensor = torch.stack(embeddings)
+                        ild_score = IntraListDiversity().calculate_ild(embeddings_tensor)
+                        self.metrics[f"ild@{k}"] += ild_score
+                    else:
+                        # If we have fewer than 2 embeddings, ILD is 0
+                        self.metrics[f"ild@{k}"] += 0.0
         self.total += B
 
     def reduce(self) -> dict:

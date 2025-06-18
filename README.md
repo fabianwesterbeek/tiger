@@ -59,6 +59,9 @@ _Explain why these metrics are appropriate for your recommendation task and what
 
 - [ ] Metric #1
   - [ ] Description:
+- [ ] Intra-List Diversity (ILD)
+  - [ ] Description: Measures the diversity of recommendations by calculating the average pairwise cosine distance between content embeddings of recommended items. Higher values indicate more diverse recommendations.
+
 
 
 ---
@@ -80,6 +83,10 @@ _Explain your approach in simple terms. Describe your model pipeline: data input
 ## 🌱 Proposed Extensions
 
 _List & briefly describe the extensions that you made to the original method, including extending evaluation e.g., other metrics or new datasets considered._
+
+- Semantic ID to Content Embedding Lookup Table: Implemented a lookup table that maps semantic IDs to their corresponding content embeddings, enabling efficient retrieval and additional metrics.
+- Intra-List Diversity (ILD) Metric: Added a new evaluation metric that measures the diversity of recommendation lists based on content embeddings, complementing existing Gini coefficient diversity measurements.
+
 
 
 

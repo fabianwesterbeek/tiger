@@ -15,6 +15,7 @@ from evaluate.metrics import TopKAccumulator
 from modules.model import EncoderDecoderRetrievalModel
 from modules.scheduler.inv_sqrt import InverseSquareRootScheduler
 from modules.tokenizer.semids import SemanticIdTokenizer
+from modules.tokenizer.lookup_table import SemanticIDLookupTable
 from modules.utils import compute_debug_metrics
 from modules.utils import parse_config
 from huggingface_hub import login
@@ -142,6 +143,15 @@ def train(
     print("Tokenizer initialized.")
     tokenizer = accelerator.prepare(tokenizer)
     tokenizer.precompute_corpus_ids(item_dataset)
+
+    # Create and build lookup table for ILD calculation
+    if accelerator.is_main_process:
+        print("Building semantic ID to embedding lookup table...")
+        lookup_table = SemanticIDLookupTable(tokenizer.rq_vae)
+        num_entries = lookup_table.build_lookup_table(item_dataset)
+        print(f"Lookup table built with {num_entries} entries")
+    else:
+        lookup_table = None
 
     # -- some debugging --
     ## Debug information
@@ -275,9 +285,9 @@ def train(
                             tokenized_data, top_k=True, temperature=1
                         )
                         actual, top_k = tokenized_data.sem_ids_fut, generated.sem_ids
-                        # add the tokinzer
+                        # add the tokenizer and lookup table for ILD calculation
                         metrics_accumulator.accumulate(
-                            actual=actual, top_k=top_k, tokenizer=tokenizer
+                            actual=actual, top_k=top_k, tokenizer=tokenizer, lookup_table=lookup_table
                         )
                 eval_metrics = metrics_accumulator.reduce()
 
