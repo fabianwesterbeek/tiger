@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import numpy as np
 from einops import rearrange
 import torch._dynamo
