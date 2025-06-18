@@ -168,7 +168,9 @@ class TopKAccumulator:
                     print(f"\nDEBUG: Starting lookup for batch {b}, k={k}, topk shape: {topk_pred.shape}")
                     for i, pred in enumerate(topk_pred):
                         print(f"DEBUG: Processing pred[{i}]: shape={pred.shape}, dtype={pred.dtype}, values={pred.tolist()}")
-                        embedding = lookup_table.lookup(pred)
+                        # Only use the first 3 elements of semantic ID for lookup
+                        semantic_id_prefix = pred[:3] if len(pred) >= 3 else pred
+                        embedding = lookup_table.lookup(semantic_id_prefix)
                         if embedding is not None:
                             embeddings.append(embedding)
                             print(f"DEBUG: Found embedding for pred[{i}]: shape={embedding.shape}")

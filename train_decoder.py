@@ -153,16 +153,16 @@ def train(
         num_entries = lookup_table.build_lookup_table(item_dataset)
         print(f"Lookup table built with {num_entries} entries")
 
-        # Debug: Check if lookup table was built properly
-        sample_item = item_dataset[0]
-        sample_item_tensor = batch_to(sample_item, device).x
-        print(f"DEBUG: Sample item tensor shape: {sample_item_tensor.shape}")
-        with torch.no_grad():
-            sem_ids = tokenizer.rq_vae.get_semantic_ids(sample_item_tensor).sem_ids
-            print(f"DEBUG: Sample semantic ID shape: {sem_ids.shape}, value: {sem_ids.tolist()}")
-            sem_id_tuple = tuple(sem_ids[0].cpu().tolist())
-            print(f"DEBUG: Sample semantic ID tuple: {sem_id_tuple}")
-            print(f"DEBUG: Is sample ID in lookup table: {sem_id_tuple in lookup_table.id_to_embedding_map}")
+        # # Debug: Check if lookup table was built properly
+        # sample_item = item_dataset[0]
+        # sample_item_tensor = batch_to(sample_item, device).x
+        # print(f"DEBUG: Sample item tensor shape: {sample_item_tensor.shape}")
+        # with torch.no_grad():
+        #     sem_ids = tokenizer.rq_vae.get_semantic_ids(sample_item_tensor).sem_ids
+        #     print(f"DEBUG: Sample semantic ID shape: {sem_ids.shape}, value: {sem_ids.tolist()}")
+        #     sem_id_tuple = tuple(sem_ids[0].cpu().tolist())
+        #     print(f"DEBUG: Sample semantic ID tuple: {sem_id_tuple}")
+        #     print(f"DEBUG: Is sample ID in lookup table: {sem_id_tuple in lookup_table.id_to_embedding_map}")
     else:
         lookup_table = None
 
