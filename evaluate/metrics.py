@@ -173,10 +173,9 @@ class TopKAccumulator:
                         embedding = lookup_table.lookup(semantic_id_prefix)
                         if embedding is not None:
                             embeddings.append(embedding)
-                            print(f"DEBUG: Found embedding for pred[{i}]: shape={embedding.shape}")
+                            print(f"DEBUG1: Found embedding for pred[{i}]: shape={embedding.shape}")
                         else:
-                            pass
-                            # print(f"DEBUG: Embedding NOT found for pred[{i}]")
+                            print(f"DEBUG2: Embedding NOT found for pred[{i}]")
 
                     # Calculate ILD if we have at least 2 embeddings
                     if len(embeddings) >= 2:
