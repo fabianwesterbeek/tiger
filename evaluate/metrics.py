@@ -119,6 +119,8 @@ class TopKAccumulator:
         self.metrics = defaultdict(float)
 
     def accumulate(self, actual: Tensor, top_k: Tensor, tokenizer=None, lookup_table=None) -> None:
+        if lookup_table is not None:
+            print(f"Lookup table: {lookup_table}")
         B, D = actual.shape
         pos_match = rearrange(actual, "b d -> b 1 d") == top_k
         for i in range(D):
