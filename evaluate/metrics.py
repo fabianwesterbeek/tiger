@@ -175,7 +175,8 @@ class TopKAccumulator:
                             embeddings.append(embedding)
                             print(f"DEBUG: Found embedding for pred[{i}]: shape={embedding.shape}")
                         else:
-                            print(f"DEBUG: Embedding NOT found for pred[{i}]")
+                            pass
+                            # print(f"DEBUG: Embedding NOT found for pred[{i}]")
 
                     # Calculate ILD if we have at least 2 embeddings
                     if len(embeddings) >= 2:
