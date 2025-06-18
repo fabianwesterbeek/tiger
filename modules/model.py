@@ -189,9 +189,11 @@ class EncoderDecoderRetrievalModel(nn.Module):
         assert self.enable_generation, "Model generation is not enabled"
 
         B, N = batch.sem_ids.shape
+        print(f"DEBUG: generate_next_sem_id - batch size: {B}, sem_ids shape: {batch.sem_ids.shape}")
         generated, log_probas = None, 0
         k = 32 if top_k else 1
         n_top_k_candidates = 200 if top_k else 1
+        print(f"DEBUG: generate params - k: {k}, n_top_k_candidates: {n_top_k_candidates}")
 
         input_batch = TokenizedSeqBatch(
             user_ids=batch.user_ids,
@@ -210,9 +212,10 @@ class EncoderDecoderRetrievalModel(nn.Module):
             )
 
             if generated is None:
-                is_valid_prefix = self.inference_verifier_fn(
-                    samples_batched.unsqueeze(-1)
-                )
+                samples_for_verify = samples_batched.unsqueeze(-1)
+                print(f"DEBUG: Verifying samples shape: {samples_for_verify.shape}")
+                is_valid_prefix = self.inference_verifier_fn(samples_for_verify)
+                print(f"DEBUG: Valid prefix count: {is_valid_prefix.sum().item()}/{is_valid_prefix.numel()}")
             else:
                 prefix = torch.cat(
                     [
@@ -223,7 +226,9 @@ class EncoderDecoderRetrievalModel(nn.Module):
                     ],
                     axis=-1,
                 )
+                print(f"DEBUG: Prefix shape for verification: {prefix.shape}")
                 is_valid_prefix = self.inference_verifier_fn(prefix).reshape(B, -1)
+                print(f"DEBUG: Valid prefix count (iteration {i}): {is_valid_prefix.sum().item()}/{is_valid_prefix.numel()}")
 
             sampled_log_probas = torch.log(
                 torch.gather(probas_batched, 1, samples_batched)
@@ -242,6 +247,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
                 sorted_indices[:, :k],
             )
             top_k_samples = torch.gather(samples, 1, top_k_indices)
+            print(f"DEBUG: Top-k samples shape: {top_k_samples.shape}")
 
             if generated is not None:
                 parent_id = torch.gather(
@@ -320,9 +326,12 @@ class EncoderDecoderRetrievalModel(nn.Module):
                 generated = top_k_samples.unsqueeze(-1)
                 log_probas = torch.clone(top_k_log_probas.detach())
 
-        return GenerationOutput(
+        print(f"DEBUG: Final generated shape: {generated.shape}, values sample: {generated[0][0].tolist()}")
+        result = GenerationOutput(
             sem_ids=generated.squeeze(), log_probas=log_probas.squeeze()
         )
+        print(f"DEBUG: Result sem_ids shape: {result.sem_ids.shape}")
+        return result
 
     @torch.compile
     def forward(self, batch: TokenizedSeqBatch) -> ModelOutput:

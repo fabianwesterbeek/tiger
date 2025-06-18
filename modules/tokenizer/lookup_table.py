@@ -73,6 +73,16 @@ class SemanticIDLookupTable(nn.Module):
                 sem_id_tuple = tuple(sem_id.detach().cpu().tolist())
                 self.id_to_embedding_map[sem_id_tuple] = embedding[i].detach().cpu()
 
+                # Debug: Print first 10 entries as they are added
+                if len(self.id_to_embedding_map) <= 10:
+                    print(f"DEBUG: Added to lookup table - Key: {sem_id_tuple}")
+
+        # Debug: Print a summary of keys
+        print(f"DEBUG: Lookup table built with {len(self.id_to_embedding_map)} entries")
+        print(f"DEBUG: Sample of first 5 keys: {list(self.id_to_embedding_map.keys())[:5]}")
+        key_lengths = [len(k) for k in list(self.id_to_embedding_map.keys())[:20]]
+        print(f"DEBUG: Key lengths in lookup table: {key_lengths}")
+
         return len(self.id_to_embedding_map)
 
     @torch._dynamo.disable
@@ -86,9 +96,23 @@ class SemanticIDLookupTable(nn.Module):
         Returns:
             torch.Tensor: The content embedding for the semantic ID or None if not found
         """
+        original_sem_id = sem_id
         if isinstance(sem_id, torch.Tensor):
             sem_id = tuple(sem_id.detach().cpu().tolist())
-        return self.id_to_embedding_map.get(sem_id)
+
+        # Debug: Print lookup attempts
+        result = self.id_to_embedding_map.get(sem_id)
+        if result is None:
+            print(f"DEBUG: Lookup FAILED - Key: {sem_id}, Original tensor shape: {original_sem_id.shape if isinstance(original_sem_id, torch.Tensor) else 'N/A'}")
+            # Try to find similar keys
+            if len(self.id_to_embedding_map) > 0:
+                sample_key = next(iter(self.id_to_embedding_map.keys()))
+                print(f"DEBUG: Sample key in table: {sample_key}, length: {len(sample_key)}")
+                print(f"DEBUG: Failed key length: {len(sem_id)}")
+        else:
+            print(f"DEBUG: Lookup SUCCESS - Key: {sem_id[:3]}..., Found embedding of shape: {result.shape}")
+
+        return result
 
     @torch._dynamo.disable
     def batch_lookup(self, sem_ids):

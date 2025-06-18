@@ -86,7 +86,9 @@ class IntraListDiversity:
         Returns:
             float: The intra-list diversity score (average pairwise cosine distance)
         """
+        print(f"DEBUG: IntraListDiversity.calculate_ild - embeddings shape: {embeddings.shape}")
         if len(embeddings) <= 1:
+            print("DEBUG: IntraListDiversity - Not enough embeddings (<=1), returning 0.0")
             return 0.0
 
         # Normalize embeddings for cosine similarity
@@ -163,13 +165,15 @@ class TopKAccumulator:
                 if lookup_table is not None and not DISABLE_ILD:
                     # Get embeddings for the topk predictions
                     embeddings = []
-                    for pred in topk_pred:
+                    print(f"\nDEBUG: Starting lookup for batch {b}, k={k}, topk shape: {topk_pred.shape}")
+                    for i, pred in enumerate(topk_pred):
+                        print(f"DEBUG: Processing pred[{i}]: shape={pred.shape}, dtype={pred.dtype}, values={pred.tolist()}")
                         embedding = lookup_table.lookup(pred)
                         if embedding is not None:
                             embeddings.append(embedding)
-                            print(f"3cz appending embedding: {embedding}")
+                            print(f"DEBUG: Found embedding for pred[{i}]: shape={embedding.shape}")
                         else:
-                            print(f"3cz embedding not found for prediction: {pred}")
+                            print(f"DEBUG: Embedding NOT found for pred[{i}]")
 
                     # Calculate ILD if we have at least 2 embeddings
                     if len(embeddings) >= 2:
