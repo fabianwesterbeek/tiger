@@ -8,7 +8,7 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
 # Flag to disable ILD computation for debugging
-DISABLE_ILD = False
+DISABLE_ILD = True
 
 
 
