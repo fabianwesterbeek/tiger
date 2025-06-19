@@ -108,7 +108,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
         user_emb = self.user_id_embedder(batch.user_ids)
         sem_ids_emb = self.sem_id_embedder(batch)
         sem_ids_emb, sem_ids_emb_fut = sem_ids_emb.seq, sem_ids_emb.fut
-        seq_lengths = batch.seq_mask.sum(axis=1)
+        seq_lengths = batch.seq_mask.sum(axis=1).to(dtype=torch.long)
 
         B, N, D = sem_ids_emb.shape
 
@@ -133,11 +133,13 @@ class EncoderDecoderRetrievalModel(nn.Module):
                 max_len=input_embedding.shape[1],
             )
 
-            seq_lengths_fut = torch.tensor(
-                input_embedding_fut.shape[1],
+            seq_lengths_fut = torch.full(
+                (B,),
+                fill_value=int(input_embedding_fut.shape[1]),
+                dtype=torch.long,
                 device=input_embedding_fut.device,
-                dtype=torch.int64,
-            ).repeat(B)
+            )
+
             input_embedding_fut = padded_to_jagged_tensor(
                 input_embedding_fut,
                 lengths=seq_lengths_fut,

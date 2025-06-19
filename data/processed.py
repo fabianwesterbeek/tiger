@@ -97,6 +97,7 @@ class SeqData(Dataset):
         subsample: bool = False,
         force_process: bool = False,
         dataset: RecDataset = RecDataset.ML_1M,
+        is_eval_split: str = "eval",
         **kwargs
     ) -> None:
 
@@ -110,8 +111,12 @@ class SeqData(Dataset):
         processed_data_path = raw_data.processed_paths[0]
         if not os.path.exists(processed_data_path) or force_process:
             raw_data.process(max_seq_len=max_seq_len)
+        
+        if is_train:
+            split = "train" 
+        else:
+            split = is_eval_split
 
-        split = "train" if is_train else "test"
         self.subsample = subsample
         self.sequence_data = raw_data.data[("user", "rated", "item")]["history"][split]
 
