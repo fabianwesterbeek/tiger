@@ -7,3 +7,5 @@ tl_out
 slurm_out
 .DS_Store
 .vscode/
+*.ipynb
+.venv
