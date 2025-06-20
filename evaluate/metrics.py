@@ -10,6 +10,15 @@ from sklearn.metrics.pairwise import cosine_similarity
 # Flag to disable ILD computation for debugging
 DISABLE_ILD = False
 
+# Flag to control verbose debug output
+ENABLE_VERBOSE = False
+
+def print_verbose(*args, **kwargs):
+    """Print only if verbose mode is enabled"""
+    if ENABLE_VERBOSE:
+        print(*args, **kwargs)
+
+
 
 
 def compute_dcg(relevance: list) -> float:
@@ -165,17 +174,17 @@ class TopKAccumulator:
                 if lookup_table is not None and not DISABLE_ILD:
                     # Get embeddings for the topk predictions
                     embeddings = []
-                    print(f"\nDEBUG: Starting lookup for batch {b}, k={k}, topk shape: {topk_pred.shape}")
+                    print_verbose(f"\nDEBUG: Starting lookup for batch {b}, k={k}, topk shape: {topk_pred.shape}")
                     for i, pred in enumerate(topk_pred):
-                        print(f"DEBUG: Processing pred[{i}]: shape={pred.shape}, dtype={pred.dtype}, values={pred.tolist()}")
+                        print_verbose(f"DEBUG: Processing pred[{i}]: shape={pred.shape}, dtype={pred.dtype}, values={pred.tolist()}")
                         # Only use the first 3 elements of semantic ID for lookup
                         semantic_id_prefix = pred[:3] if len(pred) >= 3 else pred
                         embedding = lookup_table.lookup(semantic_id_prefix)
                         if embedding is not None:
                             embeddings.append(embedding)
-                            print(f"DEBUG1: Found embedding for pred[{i}]: shape={embedding.shape}")
+                            print_verbose(f"DEBUG1: Found embedding for pred[{i}]: shape={embedding.shape}")
                         else:
-                            print(f"DEBUG2: Embedding NOT found for pred[{i}]")
+                            print_verbose(f"DEBUG2: Embedding NOT found for pred[{i}]")
 
                     # Calculate ILD if we have at least 2 embeddings
                     if len(embeddings) >= 2:
