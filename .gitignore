@@ -2,6 +2,8 @@ __pycache__
 dataset
 out
 wandb
+configs/
+job_scripts/
 trained_models/transformer*
 tl_out
 slurm_out

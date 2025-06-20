@@ -73,6 +73,8 @@ class TopKAccumulator:
     def accumulate(self, actual: Tensor, top_k: Tensor, tokenizer=None) -> None:
         B, D = actual.shape
         pos_match = rearrange(actual, "b d -> b 1 d") == top_k
+        #print("Actual upto 5",actual[:5])
+        #print("topk upto 5", top_k[:5])
         for i in range(D):
             match_found, rank = pos_match[..., : i + 1].all(axis=-1).max(axis=-1)
             matched_rank = rank[match_found]
@@ -90,9 +92,12 @@ class TopKAccumulator:
         for b in range(B):
             gold_docs = actual[b]
             pred_docs = top_k[b]
+            #print("Gold", gold_docs)
+            #print("pred_docs", pred_docs)
             for k in self.ks:
                 topk_pred = pred_docs[:k]
                 hits = sum(1 for doc in topk_pred if doc in gold_docs)
+                #print(hits)
                 self.metrics[f"h@{k}"] += float(hits > 0)
                 self.metrics[f"ndcg@{k}"] += compute_ndcg_for_semantic_ids(
                     pred_docs, gold_docs, k

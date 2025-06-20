@@ -105,9 +105,13 @@ class EncoderDecoderRetrievalModel(nn.Module):
         self.out_proj = nn.Linear(attn_dim, num_embeddings, bias=False)
 
     def _predict(self, batch: TokenizedSeqBatch) -> AttentionInput:
+        #print("okay")
         user_emb = self.user_id_embedder(batch.user_ids)
+        #print("okay1")
         sem_ids_emb = self.sem_id_embedder(batch)
+        #print("okay2")
         sem_ids_emb, sem_ids_emb_fut = sem_ids_emb.seq, sem_ids_emb.fut
+        #print("okay3")
         seq_lengths = batch.seq_mask.sum(axis=1)
 
         B, N, D = sem_ids_emb.shape
@@ -117,6 +121,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
 
         pos = torch.arange(N, device=sem_ids_emb.device).unsqueeze(0)
         wpe = self.wpe(pos)
+        #print("okay5")
 
         input_embedding = torch.cat([user_emb, wpe + sem_ids_emb], axis=1)
         input_embedding_fut = self.bos_emb.repeat(B, 1, 1)
@@ -125,6 +130,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
             input_embedding_fut = torch.cat(
                 [input_embedding_fut, sem_ids_emb_fut + tte_fut], axis=1
             )
+        #print("okay6")
 
         if self.jagged_mode:
             input_embedding = padded_to_jagged_tensor(
@@ -153,7 +159,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
             )
             f_mask = torch.zeros_like(mem_mask, dtype=torch.float32)
             f_mask[~mem_mask] = float("-inf")
-
+        #print("okay7")
         transformer_context = self.in_proj_context(self.do(self.norm(input_embedding)))
         transformer_input = self.in_proj(self.do(self.norm_cxt(input_embedding_fut)))
 
@@ -344,23 +350,28 @@ class EncoderDecoderRetrievalModel(nn.Module):
                     "(b n) -> b n",
                     b=B,
                 )
-                loss = unred_loss.sum(axis=1).mean()
+                base_loss = unred_loss.sum(axis=1).mean() 
             else:
                 logits = predict_out
                 out = logits[:, :-1, :].flatten(end_dim=1)
                 target = batch.sem_ids_fut.flatten(end_dim=1)
-                loss = (
-                    rearrange(
-                        F.cross_entropy(out, target, reduction="none", ignore_index=-1),
-                        "(b n) -> b n",
-                        b=B,
-                    )
-                    .sum(axis=1)
-                    .mean()
-                )
+                base_loss = rearrange(
+                    F.cross_entropy(out, target, reduction="none", ignore_index=-1),
+                    "(b n) -> b n",
+                    b=B,
+                ).sum(axis=1).mean()
+
+            log_probs = F.log_softmax(logits, dim=-1)  # shape: [B*N, vocab_size]
+            probs = torch.exp(log_probs)
+            entropy = -torch.sum(probs * log_probs, dim=-1).mean() 
+            λ = 0.05  # Regularization strength, can be tuned
+            loss = base_loss - λ * entropy  # maximizing entropy
+
+
+            loss_d = unred_loss.mean(axis=0) if self.jagged_mode else None
             if not self.training and self.jagged_mode:
                 self.transformer.cached_enc_output = None
-            loss_d = unred_loss.mean(axis=0)
+
         elif self.jagged_mode:
             trnsf_out = trnsf_out.contiguous()
             trnsf_out_flattened = rearrange(
