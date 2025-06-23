@@ -261,7 +261,7 @@ def train(
     ) as pbar:
         for iter in range(iterations):
             model.train()
-            print(f"Training iteration {iter + 1}/{iterations}")
+            # print(f"Training iteration {iter + 1}/{iterations}")
             total_loss = 0
             optimizer.zero_grad()
             for _ in range(gradient_accumulate_every):
@@ -394,8 +394,8 @@ def train(
 
             pbar.update(1)
 
-    best_checkpoint_path = pretrained_decoder_path
-    state = torch.load(best_checkpoint_path, map_location=device)
+    # best_checkpoint_path = pretrained_decoder_path
+    # state = torch.load(best_checkpoint_path, map_location=device)
 
     model.load_state_dict(state["model"])
     model.eval()
