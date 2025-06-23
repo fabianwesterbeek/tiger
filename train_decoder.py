@@ -16,7 +16,7 @@ from modules.model import EncoderDecoderRetrievalModel
 # from modules.model_ext import EncoderDecoderRetrievalModelExt as EncoderDecoderRetrievalModel
 from modules.scheduler.inv_sqrt import InverseSquareRootScheduler
 from modules.tokenizer.semids import SemanticIdTokenizer
-#from modules.tokenizer.lookup_table import SemanticIDLookupTable
+from modules.tokenizer.lookup_table import SemanticIDLookupTable
 from modules.utils import compute_debug_metrics
 from modules.utils import parse_config
 from huggingface_hub import login
@@ -169,27 +169,27 @@ def train(
     tokenizer = accelerator.prepare(tokenizer)
     print("DEBUG: Precomputing corpus IDs...")
     tokenizer.precompute_corpus_ids(item_dataset)
-    # print("DEBUG: Finished precomputing corpus IDs")
+    print("DEBUG: Finished precomputing corpus IDs")
 
-    # # Create and build lookup table for ILD calculation
-    # if accelerator.is_main_process:
-    #     print("Building semantic ID to embedding lookup table...")
-    #     lookup_table = SemanticIDLookupTable(tokenizer.rq_vae)
-    #     num_entries = lookup_table.build_lookup_table(item_dataset)
-    #     print(f"Lookup table built with {num_entries} entries")
+    # Create and build lookup table for ILD calculation
+    if accelerator.is_main_process:
+        print("Building semantic ID to embedding lookup table...")
+        lookup_table = SemanticIDLookupTable(tokenizer.rq_vae)
+        num_entries = lookup_table.build_lookup_table(item_dataset)
+        print(f"Lookup table built with {num_entries} entries")
 
-    #     # # Debug: Check if lookup table was built properly
-    #     # sample_item = item_dataset[0]
-    #     # sample_item_tensor = batch_to(sample_item, device).x
-    #     # print(f"DEBUG: Sample item tensor shape: {sample_item_tensor.shape}")
-    #     # with torch.no_grad():
-    #     #     sem_ids = tokenizer.rq_vae.get_semantic_ids(sample_item_tensor).sem_ids
-    #     #     print(f"DEBUG: Sample semantic ID shape: {sem_ids.shape}, value: {sem_ids.tolist()}")
-    #     #     sem_id_tuple = tuple(sem_ids[0].cpu().tolist())
-    #     #     print(f"DEBUG: Sample semantic ID tuple: {sem_id_tuple}")
-    #     #     print(f"DEBUG: Is sample ID in lookup table: {sem_id_tuple in lookup_table.id_to_embedding_map}")
-    # else:
-    #     lookup_table = None
+        # # Debug: Check if lookup table was built properly
+        # sample_item = item_dataset[0]
+        # sample_item_tensor = batch_to(sample_item, device).x
+        # print(f"DEBUG: Sample item tensor shape: {sample_item_tensor.shape}")
+        # with torch.no_grad():
+        #     sem_ids = tokenizer.rq_vae.get_semantic_ids(sample_item_tensor).sem_ids
+        #     print(f"DEBUG: Sample semantic ID shape: {sem_ids.shape}, value: {sem_ids.tolist()}")
+        #     sem_id_tuple = tuple(sem_ids[0].cpu().tolist())
+        #     print(f"DEBUG: Sample semantic ID tuple: {sem_id_tuple}")
+        #     print(f"DEBUG: Is sample ID in lookup table: {sem_id_tuple in lookup_table.id_to_embedding_map}")
+    else:
+        lookup_table = None
 
     # -- some debugging --
     ## Debug information
@@ -331,7 +331,7 @@ def train(
                         actual, top_k = tokenized_data.sem_ids_fut, generated.sem_ids
                         # add the tokenizer and lookup table for ILD calculation
                         metrics_accumulator.accumulate(
-                            actual=actual, top_k=top_k, tokenizer=tokenizer
+                            actual=actual, top_k=top_k, tokenizer=tokenizer, lookup_table=lookup_table
                         )
                 eval_metrics = metrics_accumulator.reduce()
 

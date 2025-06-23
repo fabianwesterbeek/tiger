@@ -60,7 +60,7 @@ def parse_config():
     gin.parse_config_file(args.config_path)
 
 
-@torch.no_grad
+@torch.no_grad()
 def compute_debug_metrics(
     batch: TokenizedSeqBatch, model_output=None, prefix: str = ""
 ) -> dict:

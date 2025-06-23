@@ -15,7 +15,6 @@ train.wandb_logging=False
 #True
 # https://api.wandb.ai/links/botta-edoardo-carnegie-mellon-university/ilggivkz, https://api.wandb.ai/links/botta-edoardo-carnegie-mellon-university/ufe656js
 # train.pretrained_rqvae_path="trained_models/rqvae_amazon_beauty/checkpoint_high_entropy.pt"
-#train.pretrained_rqvae_path="out/rqvae/amazon/checkpoint_toys_399999.pt"
 train.pretrained_rqvae_path="out/rqvae/amazon/checkpoint_toys_59999.pt"
 # Best run: https://api.wandb.ai/links/botta-edoardo-carnegie-mellon-university/xb46itxc
 # Checkpoint run: https://api.wandb.ai/links/botta-edoardo-carnegie-mellon-university/6m2fkl1y
