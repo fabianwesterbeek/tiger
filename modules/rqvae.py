@@ -126,6 +126,9 @@ class RqVae(nn.Module, PyTorchModelHubMixin):
             quantized = layer(res, temperature=gumbel_t)
             quantize_loss += quantized.loss
             emb, id = quantized.embeddings, quantized.ids
+            #assert (id >= 0).all(), "Negative quantized.ids detected!"
+            #assert (id < self.codebook_size).all(), f"quantized.ids out of bounds! Max id: {id.max()}"
+            #print("These are okay I guess")
             res = res - emb
             sem_ids.append(id)
             embs.append(emb)

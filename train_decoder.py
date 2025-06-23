@@ -13,6 +13,7 @@ from data.utils import cycle
 from data.utils import next_batch
 from evaluate.metrics import TopKAccumulator
 from modules.model import EncoderDecoderRetrievalModel
+# from modules.model_ext import EncoderDecoderRetrievalModelExt as EncoderDecoderRetrievalModel
 from modules.scheduler.inv_sqrt import InverseSquareRootScheduler
 from modules.tokenizer.semids import SemanticIdTokenizer
 from modules.tokenizer.lookup_table import SemanticIDLookupTable
@@ -118,16 +119,40 @@ def train(
         subsample=False,
         split=dataset_split,
     )
+    
+
+    eval_dataset = SeqData(
+        root=dataset_folder,
+        dataset=dataset,
+        is_train= False,
+        is_eval_split="eval",
+        subsample=False,
+        split=dataset_split,
+    )
     print("Evaluation dataset initialized.")
+
+
+    test_dataset = SeqData(
+        root=dataset_folder,
+        dataset=dataset,
+        is_train= False,
+        is_eval_split="test",
+        subsample=False,
+        split=dataset_split,
+    )
+
+    print("Test dataset initialized")
+    
+
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
     train_dataloader = cycle(train_dataloader)
     eval_dataloader = DataLoader(eval_dataset, batch_size=batch_size, shuffle=True)
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
-    train_dataloader, eval_dataloader = accelerator.prepare(
-        train_dataloader, eval_dataloader
-    )
+    train_dataloader, eval_dataloader, test_dataloader = accelerator.prepare(
+    train_dataloader, eval_dataloader, test_dataloader)
 
     tokenizer = SemanticIdTokenizer(
         input_dim=vae_input_dim,
@@ -219,6 +244,11 @@ def train(
 
     model, optimizer, lr_scheduler = accelerator.prepare(model, optimizer, lr_scheduler)
 
+
+    current_best = 0 
+    patience = 5
+    patience_counter = 0
+
     metrics_accumulator = TopKAccumulator(ks=[1, 5, 10])
     num_params = sum(p.numel() for p in model.parameters())
     print(f"Device: {device}, Num Parameters: {num_params}")
@@ -238,10 +268,10 @@ def train(
                 data = next_batch(train_dataloader, device)
                 tokenized_data = tokenizer(data)
 
-                with accelerator.autocast():
-                    model_output = model(tokenized_data)
-                    loss = model_output.loss / gradient_accumulate_every
-                    total_loss += loss
+                #with accelerator.autocast():
+                model_output = model(tokenized_data)
+                loss = model_output.loss / gradient_accumulate_every
+                total_loss += loss
 
                 if wandb_logging and accelerator.is_main_process:
                     train_debug_metrics = compute_debug_metrics(
@@ -259,6 +289,7 @@ def train(
             lr_scheduler.step()
 
             accelerator.wait_for_everyone()
+
 
             if (iter + 1) % partial_eval_every == 0:
                 model.eval()
@@ -305,13 +336,13 @@ def train(
                 eval_metrics = metrics_accumulator.reduce()
 
                 print(eval_metrics)
-                if accelerator.is_main_process and wandb_logging:
-                    wandb.log(eval_metrics)
 
-                metrics_accumulator.reset()
+                patience_counter +=1
 
-            if accelerator.is_main_process:
-                if (iter + 1) % save_model_every == 0 or iter + 1 == iterations:
+                ## We can change the Early stopping metric
+                if eval_metrics["ndcg@5"] > current_best:
+                    current_best = eval_metrics["ndcg@5"]
+                    patience_counter = 0
                     state = {
                         "iter": iter,
                         "model": model.state_dict(),
@@ -322,8 +353,34 @@ def train(
                     if not os.path.exists(save_dir_root):
                         os.makedirs(save_dir_root)
 
-                    torch.save(state, save_dir_root + f"checkpoint_{dataset_split}_{iter}.pt")
-                    print(f"Model checkpoint saved at iteration {iter + 1}")
+                    torch.save(state, save_dir_root + f"checkpoint_{dataset_split}_best.pt")
+                    print(f"Saving Current Best Model")
+
+                if accelerator.is_main_process and wandb_logging:
+                    wandb.log(eval_metrics)
+
+                metrics_accumulator.reset()
+
+                if patience_counter > patience:
+                    print("Early stopping. Done training")
+                    print(f"Best Eval NDCG@5:{current_best}")
+                    break
+
+
+            if accelerator.is_main_process:
+                if  iter + 1 == iterations:
+                    state = {
+                        "iter": iter,
+                        "model": model.state_dict(),
+                        "optimizer": optimizer.state_dict(),
+                        "scheduler": lr_scheduler.state_dict(),
+                    }
+
+                    if not os.path.exists(save_dir_root):
+                        os.makedirs(save_dir_root)
+
+                    torch.save(state, save_dir_root + f"checkpoint_{dataset_split}_final.pt")
+                    print(f"Final Model Checkpoint Saved")
 
                 if wandb_logging:
                     wandb.log(
@@ -334,37 +391,45 @@ def train(
                         }
                     )
 
+
             pbar.update(1)
 
-    # Always perform a full evaluation after training completes
+    best_checkpoint_path = pretrained_decoder_path
+    state = torch.load(best_checkpoint_path, map_location=device)
+
+    model.load_state_dict(state["model"])
     model.eval()
     model.enable_generation = True
-    print(f"Performing final full evaluation after training")
+    metrics_accumulator.reset()
+
     with tqdm(
-        eval_dataloader,
-        desc=f"Final Evaluation",
+        test_dataloader,
+        desc="Test",
         disable=not accelerator.is_main_process,
         mininterval=1.0,
-    ) as pbar_eval:
-        for batch in pbar_eval:
+        ) as pbar_test:
+        for batch in pbar_test:
+
             data = batch_to(batch, device)
             tokenized_data = tokenizer(data)
 
             generated = model.generate_next_sem_id(
-                tokenized_data, top_k=True, temperature=1
+            tokenized_data, top_k=True, temperature=1
             )
             actual, top_k = tokenized_data.sem_ids_fut, generated.sem_ids
-            # add the tokenizer and lookup table for ILD calculation
+            # add the tokinzer
+            print("pred[0]", generated.sem_ids[0, 0])   # almost certainly [-1 … -1]
+            print("gold[0]", tokenized_data.sem_ids_fut[0])
+            valid = tokenizer.exists_prefix(generated.sem_ids[0, 0].unsqueeze(0))
+            print("generated prefix passes verifier ?", valid.item())
             metrics_accumulator.accumulate(
-                actual=actual, top_k=top_k, tokenizer=tokenizer, lookup_table=lookup_table
+                actual=actual, top_k=top_k, tokenizer=tokenizer
             )
-    final_eval_metrics = metrics_accumulator.reduce()
 
-    print(final_eval_metrics)
-    if accelerator.is_main_process and wandb_logging:
-        wandb.log({**final_eval_metrics, "final_evaluation": True})
+        test_metrics = metrics_accumulator.reduce()
+        print("Final Test Metrics: ")
+        print(test_metrics)
 
-    metrics_accumulator.reset()
 
     if wandb_logging:
         wandb.finish()
@@ -373,3 +438,42 @@ def train(
 if __name__ == "__main__":
     parse_config()
     train()
+
+
+    # Always perform a full evaluation after training completes
+#     model.eval()
+#     model.enable_generation = True
+#     print(f"Performing final full evaluation after training")
+#     with tqdm(
+#         eval_dataloader,
+#         desc=f"Final Evaluation",
+#         disable=not accelerator.is_main_process,
+#         mininterval=1.0,
+#     ) as pbar_eval:
+#         for batch in pbar_eval:
+#             data = batch_to(batch, device)
+#             tokenized_data = tokenizer(data)
+
+#             generated = model.generate_next_sem_id(
+#                 tokenized_data, top_k=True, temperature=1
+#             )
+#             actual, top_k = tokenized_data.sem_ids_fut, generated.sem_ids
+#             # add the tokenizer and lookup table for ILD calculation
+#             metrics_accumulator.accumulate(
+#                 actual=actual, top_k=top_k, tokenizer=tokenizer, lookup_table=lookup_table
+#             )
+#     final_eval_metrics = metrics_accumulator.reduce()
+
+#     print(final_eval_metrics)
+#     if accelerator.is_main_process and wandb_logging:
+#         wandb.log({**final_eval_metrics, "final_evaluation": True})
+
+#     metrics_accumulator.reset()
+
+#     if wandb_logging:
+#         wandb.finish()
+
+
+# if __name__ == "__main__":
+#     parse_config()
+#     train()
