@@ -395,7 +395,7 @@ def train(
             pbar.update(1)
 
     best_checkpoint_path = pretrained_decoder_path
-    state = torch.load(best_checkpoint_path, map_location=device)
+    state = torch.load(save_dir_root+f"checkpoint_{dataset_split}_best.pt", map_location=device)
 
     model.load_state_dict(state["model"])
     model.eval()
@@ -418,13 +418,11 @@ def train(
             )
             actual, top_k = tokenized_data.sem_ids_fut, generated.sem_ids
             # add the tokinzer
-            print("pred[0]", generated.sem_ids[0, 0])   # almost certainly [-1 … -1]
-            print("gold[0]", tokenized_data.sem_ids_fut[0])
+            #print("pred[0]", generated.sem_ids[0, 0])   # almost certainly [-1 … -1]
+            #print("gold[0]", tokenized_data.sem_ids_fut[0])
             valid = tokenizer.exists_prefix(generated.sem_ids[0, 0].unsqueeze(0))
             print("generated prefix passes verifier ?", valid.item())
-            metrics_accumulator.accumulate(
-                actual=actual, top_k=top_k, tokenizer=tokenizer
-            )
+            metrics_accumulator.accumulate(actual=actual, top_k=top_k, tokenizer=tokenizer, lookup_table = lookup_table)
 
         test_metrics = metrics_accumulator.reduce()
         print("Final Test Metrics: ")

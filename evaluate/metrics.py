@@ -96,7 +96,7 @@ class IntraListDiversity:
         """
         print(f"DEBUG: IntraListDiversity.calculate_ild - embeddings shape: {embeddings.shape}")
         if len(embeddings) <= 1:
-            print("DEBUG: IntraListDiversity - Not enough embeddings (<=1), returning 0.0")
+            #print("DEBUG: IntraListDiversity - Not enough embeddings (<=1), returning 0.0")
             return 0.0
 
         # Normalize embeddings for cosine similarity
@@ -178,15 +178,15 @@ class TopKAccumulator:
                 if lookup_table is not None and not DISABLE_ILD:
                     # Get embeddings for the topk predictions
                     embeddings = []
-                    print_verbose(f"\nDEBUG: Starting lookup for batch {b}, k={k}, topk shape: {topk_pred.shape}")
+                    #print_verbose(f"\nDEBUG: Starting lookup for batch {b}, k={k}, topk shape: {topk_pred.shape}")
                     for i, pred in enumerate(topk_pred):
-                        print_verbose(f"DEBUG: Processing pred[{i}]: shape={pred.shape}, dtype={pred.dtype}, values={pred.tolist()}")
+                        #print_verbose(f"DEBUG: Processing pred[{i}]: shape={pred.shape}, dtype={pred.dtype}, values={pred.tolist()}")
                         # Only use the first 3 elements of semantic ID for lookup
                         semantic_id_prefix = pred[:3] if len(pred) >= 3 else pred
                         embedding = lookup_table.lookup(semantic_id_prefix)
                         if embedding is not None:
                             embeddings.append(embedding)
-                            print_verbose(f"DEBUG1: Found embedding for pred[{i}]: shape={embedding.shape}")
+                            #print_verbose(f"DEBUG1: Found embedding for pred[{i}]: shape={embedding.shape}")
                         else:
                             print_verbose(f"DEBUG2: Embedding NOT found for pred[{i}]")
 
