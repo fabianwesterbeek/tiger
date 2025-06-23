@@ -1,9 +1,24 @@
 from collections import defaultdict
 from torch import Tensor
 import torch
+import torch._dynamo
 import math
 from einops import rearrange
 import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Flag to disable ILD computation for debugging
+DISABLE_ILD = False
+
+# Flag to control verbose debug output
+ENABLE_VERBOSE = False
+
+def print_verbose(*args, **kwargs):
+    """Print only if verbose mode is enabled"""
+    if ENABLE_VERBOSE:
+        print(*args, **kwargs)
+
+
 
 
 def compute_dcg(relevance: list) -> float:
@@ -61,6 +76,49 @@ class GiniCoefficient:
         return self.gini_coefficient(list(freqs.values()))
 
 
+class IntraListDiversity:
+    """
+    A class to calculate intra-list diversity (ILD) using content embeddings.
+    ILD measures how diverse the items in a recommendation list are.
+    Higher values indicate more diverse recommendations.
+    """
+
+    @torch._dynamo.disable()
+    def calculate_ild(self, embeddings):
+        """
+        Compute the intra-list diversity of embeddings using cosine distance.
+
+        Args:
+            embeddings: A tensor of shape [n, d] containing n embeddings of dimension d
+
+        Returns:
+            float: The intra-list diversity score (average pairwise cosine distance)
+        """
+        print(f"DEBUG: IntraListDiversity.calculate_ild - embeddings shape: {embeddings.shape}")
+        if len(embeddings) <= 1:
+            print("DEBUG: IntraListDiversity - Not enough embeddings (<=1), returning 0.0")
+            return 0.0
+
+        # Normalize embeddings for cosine similarity
+        normalized_embeddings = embeddings / (embeddings.norm(dim=1, keepdim=True) + 1e-8)
+
+        # Calculate pairwise cosine similarities
+        similarities = torch.mm(normalized_embeddings, normalized_embeddings.t())
+
+        # Convert similarities to distances (1 - similarity)
+        distances = 1.0 - similarities
+
+        # Zero out the diagonal (self-similarity)
+        n = distances.size(0)
+        distances.fill_diagonal_(0.0)
+
+        # Calculate average pairwise distance (upper triangular part only)
+        total_distance = distances.sum() / 2.0  # Divide by 2 to count each pair once
+        num_pairs = (n * (n - 1)) / 2.0
+
+        return (total_distance / num_pairs).item()
+
+
 class TopKAccumulator:
     def __init__(self, ks=[1, 5, 10]):
         self.ks = ks
@@ -70,7 +128,10 @@ class TopKAccumulator:
         self.total = 0
         self.metrics = defaultdict(float)
 
-    def accumulate(self, actual: Tensor, top_k: Tensor, tokenizer=None) -> None:
+    @torch._dynamo.disable()
+    def accumulate(self, actual: Tensor, top_k: Tensor, tokenizer=None, lookup_table=None) -> None:
+        if lookup_table is not None:
+            print(f"Lookup table: {lookup_table}")
         B, D = actual.shape
         pos_match = rearrange(actual, "b d -> b 1 d") == top_k
         #print("Actual upto 5",actual[:5])
@@ -96,8 +157,8 @@ class TopKAccumulator:
             #print("pred_docs", pred_docs)
             for k in self.ks:
                 topk_pred = pred_docs[:k]
-                hits = sum(1 for doc in topk_pred if doc in gold_docs)
-                #print(hits)
+                # hits = sum(1 for doc in topk_pred if doc in gold_docs)
+                hits = torch.any(torch.all(topk_pred == gold_docs, dim=1)).item() # fixed hit calculation
                 self.metrics[f"h@{k}"] += float(hits > 0)
                 self.metrics[f"ndcg@{k}"] += compute_ndcg_for_semantic_ids(
                     pred_docs, gold_docs, k
@@ -112,6 +173,34 @@ class TopKAccumulator:
                     self.metrics[f"gini@{k}"] += GiniCoefficient().calculate_list_gini(
                         list_gini, key="category"
                     )
+
+                # Calculate intra-list diversity if lookup table is provided and ILD is not disabled
+                if lookup_table is not None and not DISABLE_ILD:
+                    # Get embeddings for the topk predictions
+                    embeddings = []
+                    print_verbose(f"\nDEBUG: Starting lookup for batch {b}, k={k}, topk shape: {topk_pred.shape}")
+                    for i, pred in enumerate(topk_pred):
+                        print_verbose(f"DEBUG: Processing pred[{i}]: shape={pred.shape}, dtype={pred.dtype}, values={pred.tolist()}")
+                        # Only use the first 3 elements of semantic ID for lookup
+                        semantic_id_prefix = pred[:3] if len(pred) >= 3 else pred
+                        embedding = lookup_table.lookup(semantic_id_prefix)
+                        if embedding is not None:
+                            embeddings.append(embedding)
+                            print_verbose(f"DEBUG1: Found embedding for pred[{i}]: shape={embedding.shape}")
+                        else:
+                            print_verbose(f"DEBUG2: Embedding NOT found for pred[{i}]")
+
+                    # Calculate ILD if we have at least 2 embeddings
+                    if len(embeddings) >= 2:
+                        embeddings_tensor = torch.stack(embeddings)
+                        ild_score = IntraListDiversity().calculate_ild(embeddings_tensor)
+                        self.metrics[f"ild@{k}"] += ild_score
+                    else:
+                        # If we have fewer than 2 embeddings, ILD is 0
+                        self.metrics[f"ild@{k}"] += 0.0
+                elif lookup_table is not None and DISABLE_ILD:
+                    # When ILD is disabled, just set the metric to 0
+                    self.metrics[f"ild@{k}"] += 0.0
         self.total += B
 
     def reduce(self) -> dict:
