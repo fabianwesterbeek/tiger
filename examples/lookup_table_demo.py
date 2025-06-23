@@ -127,7 +127,7 @@ def main(args):
             if len(embeddings) >= 2:
                 embeddings_tensor = torch.stack(embeddings)
                 ild_score = IntraListDiversity().calculate_ild(embeddings_tensor)
-                print(f"  ILD score: {ild_score:.4f}")
+                #print(f"  ILD score: {ild_score:.4f}")
             else:
                 print("  Not enough embeddings to calculate ILD")
 

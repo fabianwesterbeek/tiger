@@ -78,10 +78,10 @@ class SemanticIDLookupTable(nn.Module):
                     print(f"DEBUG: Added to lookup table - Key: {sem_id_tuple}")
 
         # Debug: Print a summary of keys
-        print(f"DEBUG: Lookup table built with {len(self.id_to_embedding_map)} entries")
-        print(f"DEBUG: Sample of first 5 keys: {list(self.id_to_embedding_map.keys())[:5]}")
+        #print(f"DEBUG: Lookup table built with {len(self.id_to_embedding_map)} entries")
+        #print(f"DEBUG: Sample of first 5 keys: {list(self.id_to_embedding_map.keys())[:5]}")
         key_lengths = [len(k) for k in list(self.id_to_embedding_map.keys())[:20]]
-        print(f"DEBUG: Key lengths in lookup table: {key_lengths}")
+        #print(f"DEBUG: Key lengths in lookup table: {key_lengths}")
 
         return len(self.id_to_embedding_map)
 
@@ -102,15 +102,15 @@ class SemanticIDLookupTable(nn.Module):
 
         # Debug: Print lookup attempts
         result = self.id_to_embedding_map.get(sem_id)
-        if result is None:
-            print(f"DEBUG: Lookup FAILED - Key: {sem_id}, Original tensor shape: {original_sem_id.shape if isinstance(original_sem_id, torch.Tensor) else 'N/A'}")
+        #if result is None:
+            #print(f"DEBUG: Lookup FAILED - Key: {sem_id}, Original tensor shape: {original_sem_id.shape if isinstance(original_sem_id, torch.Tensor) else 'N/A'}")
             # Try to find similar keys
-            if len(self.id_to_embedding_map) > 0:
-                sample_key = next(iter(self.id_to_embedding_map.keys()))
-                print(f"DEBUG: Sample key in table: {sample_key}, length: {len(sample_key)}")
-                print(f"DEBUG: Failed key length: {len(sem_id)}")
-        else:
-            print(f"DEBUG: Lookup SUCCESS - Key: {sem_id[:3]}..., Found embedding of shape: {result.shape}")
+            #if len(self.id_to_embedding_map) > 0:
+                #sample_key = next(iter(self.id_to_embedding_map.keys()))
+                #print(f"DEBUG: Sample key in table: {sample_key}, length: {len(sample_key)}")
+                #print(f"DEBUG: Failed key length: {len(sem_id)}")
+        #else:
+            #print(f"DEBUG: Lookup SUCCESS - Key: {sem_id[:3]}..., Found embedding of shape: {result.shape}")
 
         return result
 

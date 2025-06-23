@@ -132,12 +132,12 @@ class SemanticIdTokenizer(nn.Module):
             *sem_id_prefix.shape[:-1], dtype=bool, device=sem_id_prefix.device
         )
 
-        print(f"DEBUG: exists_prefix - sem_id_prefix shape: {sem_id_prefix.shape}, prefix_length: {prefix_length}")
-        print(f"DEBUG: exists_prefix - cached_ids shape: {self.cached_ids.shape}, prefix_cache shape: {prefix_cache.shape}")
+        #print(f"DEBUG: exists_prefix - sem_id_prefix shape: {sem_id_prefix.shape}, prefix_length: {prefix_length}")
+        #print(f"DEBUG: exists_prefix - cached_ids shape: {self.cached_ids.shape}, prefix_cache shape: {prefix_cache.shape}")
 
-        if sem_id_prefix.shape[0] < 5:  # Only print for small batches to avoid overwhelming logs
-            print(f"DEBUG: exists_prefix - sample prefix values: {sem_id_prefix[0].tolist()}")
-            print(f"DEBUG: exists_prefix - sample cache values (first 3 entries): {prefix_cache[:3].tolist()}")
+        #if sem_id_prefix.shape[0] < 5:  # Only print for small batches to avoid overwhelming logs
+            #print(f"DEBUG: exists_prefix - sample prefix values: {sem_id_prefix[0].tolist()}")
+            #print(f"DEBUG: exists_prefix - sample cache values (first 3 entries): {prefix_cache[:3].tolist()}")
 
         # Batch prefixes matching to avoid OOM.
         batches = math.ceil(sem_id_prefix.shape[0] // BATCH_SIZE)
@@ -149,10 +149,10 @@ class SemanticIdTokenizer(nn.Module):
                 .any(axis=-1)
             )
             out[i * BATCH_SIZE : (i + 1) * BATCH_SIZE, ...] = matches
-            if i == 0:  # Print only for first batch
-                print(f"DEBUG: exists_prefix - matches in batch 0: {matches.sum().item()}/{matches.numel()}")
+            #if i == 0:  # Print only for first batch
+                #print(f"DEBUG: exists_prefix - matches in batch 0: {matches.sum().item()}/{matches.numel()}")
 
-        print(f"DEBUG: exists_prefix - total matches: {out.sum().item()}/{out.numel()}")
+        #print(f"DEBUG: exists_prefix - total matches: {out.sum().item()}/{out.numel()}")
         return out
 
     def _tokenize_seq_batch_from_cached(self, ids: Tensor) -> Tensor:
