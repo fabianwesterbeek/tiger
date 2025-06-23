@@ -4,7 +4,7 @@
 #SBATCH --gpus=1
 #SBATCH --job-name=eval_amazon
 #SBATCH --time=00:30:00
-#SBATCH --output=./slurm_out/evaluation/recall_%j.out
+#SBATCH --output=./slurm_out/evaluation/Test_%j.out
 
 #exit if an error occurs
 set -e
@@ -17,13 +17,13 @@ module load CUDA/12.6.0
 source activate rq-vae
 
 #export CUDA_LAUNCH_BLOCKING=1
-export WANDB_API_KEY=0aeeb3ee9b614daf7fc11f473a88a4f0b785a83b
+#export WANDB_API_KEY=0aeeb3ee9b614daf7fc11f473a88a4f0b785a83b
 
 echo "Evaluation: amazon-beauty"
-#python train_decoder.py configs/decoder_amazon.gin
+python train_decoder.py configs/decoder_amazon.gin
 
 echo "Evaluation: amazon-sports"
 #python train_decoder.py configs/decoder_amazon_sports.gin
 
 echo "Evaluation: amazon-toys"
-python train_decoder.py configs/decoder_amazon_toys.gin
+#python train_decoder.py configs/decoder_amazon_toys.gin
