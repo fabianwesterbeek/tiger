@@ -94,7 +94,7 @@ class IntraListDiversity:
         Returns:
             float: The intra-list diversity score (average pairwise cosine distance)
         """
-        print(f"DEBUG: IntraListDiversity.calculate_ild - embeddings shape: {embeddings.shape}")
+        #print(f"DEBUG: IntraListDiversity.calculate_ild - embeddings shape: {embeddings.shape}")
         if len(embeddings) <= 1:
             #print("DEBUG: IntraListDiversity - Not enough embeddings (<=1), returning 0.0")
             return 0.0
