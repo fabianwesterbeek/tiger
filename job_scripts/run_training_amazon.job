@@ -27,14 +27,8 @@ source activate rq-vae
 # echo "Training: amazon-toys"
 #python train_rqvae.py configs/rqvae_amazon_toys.gin
 
-# echo "Training: amazon-books"
-# python train_rqvae.py configs/rqvae_books.gin
-
-# echo "Training: amazon-games"
-# python train_rqvae.py configs/rqvae_amazon_games.gin
-
 # echo "Training: amazon-pets"
 # python train_rqvae.py configs/rqvae_amazon_pets.gin
 
-echo "Training: yelp"
-python train_rqvae.py configs/rqvae_yelp.gin
+echo "Training: amazon-tools"
+python train_rqvae.py configs/rqvae_amazon_tools.gin
