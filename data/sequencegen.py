@@ -2,12 +2,12 @@ from collections import defaultdict
 import ast
 import json
 import polars as pl
-
+import argparse
 from torch_geometric.data import HeteroData
 
-class AmazonBooks():
-    def __init__(self):
-        self.split = "pets"
+class SequentialDataGenerator():
+    def __init__(self, split = "pets"):
+        self.split = split
         self.books_path = './dataset/amazon/raw/'+self.split+'/'
         self.reviews_file = 'reviews.json'
         self.meta_file = 'meta.json'
@@ -132,14 +132,11 @@ class AmazonBooks():
         return ids
 
 
-#'user2id'
-# 'id2user'
-
-# 'attribute2id' ####
-# 'id2attribute' ####
-# 'attributeid2num' ####
 if __name__ == "__main__":
-    books = AmazonBooks()
-    books.generate_sequential_data()
-    # books.create_asin_mapping()
+    parser = argparse.ArgumentParser(description="Sequential Data Generator for Dataset")
+    parser.add_argument('--split', type=str, default='tools', help='Dataset split to use (e.g., tools, books)')
+    args = parser.parse_args()
+    split = args.split
+    generator = SequentialDataGenerator(split=split)
+    generator.generate_sequential_data()
         
