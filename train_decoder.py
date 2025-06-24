@@ -167,9 +167,9 @@ def train(
     )
     print("Tokenizer initialized.")
     tokenizer = accelerator.prepare(tokenizer)
-    print("DEBUG: Precomputing corpus IDs...")
+    # print("DEBUG: Precomputing corpus IDs...")
     tokenizer.precompute_corpus_ids(item_dataset)
-    print("DEBUG: Finished precomputing corpus IDs")
+    # print("DEBUG: Finished precomputing corpus IDs")
 
     # Create and build lookup table for ILD calculation
     if accelerator.is_main_process:
