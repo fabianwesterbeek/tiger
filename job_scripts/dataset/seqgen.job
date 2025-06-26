@@ -18,4 +18,4 @@ source activate rq-vae
 
 echo "Sequential dataset generation"
 #Split = ['pets', 'office']
-python ./data/seqgen.py --split 'pets'
+python ./data/sequencegen.py --split 'pets'
