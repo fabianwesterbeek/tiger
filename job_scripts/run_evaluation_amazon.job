@@ -4,7 +4,7 @@
 #SBATCH --gpus=1
 #SBATCH --job-name=eval_amazon
 #SBATCH --time=10:30:00
-#SBATCH --output=./slurm_out/evaluation/recall_%j.out
+#SBATCH --output=./slurm_out/evaluation/office_e_%j.out
 
 #exit if an error occurs
 set -e
@@ -34,5 +34,8 @@ source activate rq-vae
 # echo "Evaluation: amazon-games"
 # python train_decoder.py configs/decoder_amazon_games.gin
 
-echo "Evaluation: amazon-pets"
-python train_decoder.py configs/decoder_amazon_pets.gin
+# echo "Evaluation: amazon-pets"
+# python train_decoder.py configs/decoder_amazon_pets.gin
+
+echo "Evaluation: amazon-office"
+python train_decoder.py configs/decoder_amazon_office.gin

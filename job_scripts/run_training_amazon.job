@@ -30,5 +30,8 @@ source activate rq-vae
 # echo "Training: amazon-pets"
 # python train_rqvae.py configs/rqvae_amazon_pets.gin
 
-echo "Training: amazon-tools"
-python train_rqvae.py configs/rqvae_amazon_tools.gin
+# echo "Training: amazon-tools"
+# python train_rqvae.py configs/rqvae_amazon_tools.gin
+
+echo "Training: amazon-office"
+python train_rqvae.py configs/rqvae_amazon_office.gin
