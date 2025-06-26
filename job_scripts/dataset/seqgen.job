@@ -17,5 +17,5 @@ module load CUDA/12.6.0
 source activate rq-vae
 
 echo "Sequential dataset generation"
-
-python ./data/books.py --split 'tools'
+#Split = ['pets', 'office']
+python ./data/seqgen.py --split 'pets'
