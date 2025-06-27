@@ -1,7 +1,7 @@
 #!/bin/bash
 
-TARGET_DIR_PETS="./dataset/amazon/temp/pets"
-TARGET_DIR_OFFICE="./dataset/amazon/temp/office"
+TARGET_DIR_PETS="./dataset/amazon/raw/pets"
+TARGET_DIR_OFFICE="./dataset/amazon/raw/office"
 
 if [ ! -d "$TARGET_DIR_PETS" ]; then
   echo "Directory $TARGET_DIR_PETS does not exist. Creating..."
