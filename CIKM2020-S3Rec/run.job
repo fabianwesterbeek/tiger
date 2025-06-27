@@ -1,0 +1,30 @@
+#!/bin/bash
+
+#SBATCH --partition=gpu_a100
+#SBATCH --gpus=1
+#SBATCH --job-name=RunSEATER
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --time=03:30:00
+#SBATCH --output=Sports%A.out
+
+module purge
+module load 2024
+module load Miniconda3/24.7.1-0
+module load jax/0.3.14-foss-2022a-CUDA-11.7.0
+module load CUDA/12.6.0
+
+# Activate your environment
+source activate seater
+
+# Go to the directory that contains the project, the runnable
+#pip list
+
+# Books
+srun python run_finetune_full.py --data_name Toys_and_Games --ckp 150
+#srun python run_finetune_full.py --data_name Sports_and_Outdoors --ckp 100
+#srun python run_finetune_full.py --data_name Beauty --ckp 150
+# srun python main.py --name SEATER_Books --dataset_name Yelp --num_workers 16 --gpu_id 0 --model SASREC --vocab 8 --batch_size 256 --test_batch_size 256 --epochs 50
+
+# cd $HOME/seater/SEATER_Generative_Retrieval/data/Yelp
+# srun python preprocessing.py
