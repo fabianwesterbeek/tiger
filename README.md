@@ -56,16 +56,16 @@ _Provide the following for all datasets, including the attributes you are consid
 
 ## 📏 Metrics
 
-- Hit Rate (H@k)
+- **Hit Rate (H@k)**
   - Description: Measures whether the ground truth item appears in the top-k recommendations, indicating the model's ability to recall relevant items.
 
-- Normalized Discounted Cumulative Gain (NDCG@k)
+- **Normalized Discounted Cumulative Gain (NDCG@k)**
   - Description: Evaluates the quality of ranking by giving higher weight to correctly ranked items that appear earlier in the recommendation list.
 
-- Intra-List Diversity (ILD)
+- **Intra-List Diversity (ILD)**
   - Description: Measures the diversity of recommendations by calculating the average pairwise cosine distance between content embeddings of recommended items. Higher values indicate more diverse recommendations.
 
-- Gini Coefficient
+- **Gini Coefficient**
   - Description: Assesses the equality of representation across different item categories in the recommendations. Lower values indicate more balanced representation of different categories.
 
 ---
