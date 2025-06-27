@@ -23,12 +23,16 @@ This repository contains a reproducibility study and diversity-focused extension
 
 
 ### Reproducibility
-
-_Summarize your key reproducability findings in bullet points._
+- The study was unable to reproduce the results for TIGER and the achieved results were nearly half of the numbers reported in the paper. A lack of open-source implemntation, and relying on a third party codebase further affects reproducibility.
+- We believe that this underscores the need for good reproducibility/transparency practices in the research community.
+- Only S3Rec showed reproducible results.
 
 ### Extensions
 
-_Summarize your key findings about the extensions you implemented in bullet points._
+- Diverse Beam Search provides a tradeoff between recall@k and NDCG@k vs diversity for the user, without harming retrieval metrics by a significantly. With the proposed approach, we also achieve a faster time for inference.
+- In contrast to this, entropy-based regularization showed limited effectiveness, possibly due to minimal fine-tuning of hyperparameters.
+- The model is now benchmarked for 2 additional Datasets, Amazon Pet Supplies and Office Products.
+
 
 ---
 
