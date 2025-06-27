@@ -160,11 +160,6 @@ Detailed instructions of reproducing the results (both of the reproduction and e
 
 ## References
 
-<a name="ref1"></a>
-1. **Rajput, S.**, Mehta, N., Singh, A., Hulikal K., Vu, T., Heldt, L., Hong, L., Tay, Y., Tran, V., Samost, J., Kula, M., Chi, E., & Sathiamoorthy, M. (2023). *Recommender Systems with Generative Retrieval*. In A. Oh, T. Naumann, A. Globerson, K. Saenko, M. Hardt, & S. Levine (Eds.), Advances in Neural Information Processing Systems, 36, 10299–10315. Curran Associates, Inc. [PDF](https://proceedings.neurips.cc/paper_files/paper/2023/file/20dcab0f14046a5c6b02b61da9f13229-Paper-Conference.pdf)
-
-<a name="ref2"></a>
-2. Wang-Cheng Kang, & McAuley, J. J. (2018). *Self-Attentive Sequential Recommendation*. CoRR, abs/1808.09781. [arXiv:1808.09781](http://arxiv.org/abs/1808.09781)
-
-<a name="ref3"></a>
-3. Zhou, K., Wang, H., Zhao, W. X., Zhu, Y., Wang, S., Zhang, F., Wang, Z., & Wen, J.-R. (2020). *S³-Rec: Self-Supervised Learning for Sequential Recommendation with Mutual Information Maximization*. CoRR, abs/2008.07873. [arXiv:2008.07873](https://arxiv.org/abs/2008-07873)
+1. <a name="ref1"></a> **Rajput, S.**, Mehta, N., Singh, A., Hulikal K., Vu, T., Heldt, L., Hong, L., Tay, Y., Tran, V., Samost, J., Kula, M., Chi, E., & Sathiamoorthy, M. (2023). *Recommender Systems with Generative Retrieval*. In A. Oh, T. Naumann, A. Globerson, K. Saenko, M. Hardt, & S. Levine (Eds.), Advances in Neural Information Processing Systems, 36, 10299–10315. Curran Associates, Inc. [PDF](https://proceedings.neurips.cc/paper_files/paper/2023/file/20dcab0f14046a5c6b02b61da9f13229-Paper-Conference.pdf)
+2. <a name="ref2"></a> Wang-Cheng Kang & McAuley, J. J. (2018). *Self-Attentive Sequential Recommendation*. CoRR, abs/1808.09781. [arXiv:1808.09781](http://arxiv.org/abs/1808.09781)
+3. <a name="ref3"></a> Zhou, K., Wang, H., Zhao, W. X., Zhu, Y., Wang, S., Zhang, F., Wang, Z., & Wen, J.-R. (2020). *S³-Rec: Self-Supervised Learning for Sequential Recommendation with Mutual Information Maximization*. CoRR, abs/2008.07873. [arXiv:2008.07873](https://arxiv.org/abs/2008-07873)
