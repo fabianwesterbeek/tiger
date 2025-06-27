@@ -119,6 +119,90 @@ class IntraListDiversity:
         return (total_distance / num_pairs).item()
 
 
+# class TopKAccumulator:
+#     def __init__(self, ks=[1, 5, 10]):
+#         self.ks = ks
+#         self.reset()
+
+#     def reset(self):
+#         self.total = 0
+#         self.metrics = defaultdict(float)
+
+#     @torch._dynamo.disable()
+#     def accumulate(self, actual: Tensor, top_k: Tensor, tokenizer=None, lookup_table=None) -> None:
+#         if lookup_table is not None:
+#             print(f"Lookup table: {lookup_table}")
+#         B, D = actual.shape
+#         pos_match = rearrange(actual, "b d -> b 1 d") == top_k
+#         #print("Actual upto 5",actual[:5])
+#         #print("topk upto 5", top_k[:5])
+#         for i in range(D):
+#             match_found, rank = pos_match[..., : i + 1].all(axis=-1).max(axis=-1)
+#             matched_rank = rank[match_found]
+#             for k in self.ks:
+#                 self.metrics[f"h@{k}_slice_:{i+1}"] += len(
+#                     matched_rank[matched_rank < k]
+#                 )
+
+#             match_found, rank = pos_match[..., i : i + 1].all(axis=-1).max(axis=-1)
+#             matched_rank = rank[match_found]
+#             for k in self.ks:
+#                 self.metrics[f"h@{k}_pos_{i}"] += len(matched_rank[matched_rank < k])
+
+#         B = actual.size(0)
+#         for b in range(B):
+#             gold_docs = actual[b]
+#             pred_docs = top_k[b]
+#             #print("Gold", gold_docs)
+#             #print("pred_docs", pred_docs)
+#             for k in self.ks:
+#                 topk_pred = pred_docs[:k]
+#                 # hits = sum(1 for doc in topk_pred if doc in gold_docs)
+#                 hits = torch.any(torch.all(topk_pred == gold_docs, dim=1)).item() # fixed hit calculation
+#                 self.metrics[f"h@{k}"] += float(hits > 0)
+#                 self.metrics[f"ndcg@{k}"] += compute_ndcg_for_semantic_ids(
+#                     pred_docs, gold_docs, k
+#                 )
+#                 # if the tokinzer is given then for each prediction find the catergoy and add it to the list and then caclulate the gini coefficient
+#                 if tokenizer is not None:
+#                     list_gini = []
+#                     for pred in topk_pred:
+#                         idx = str(pred.tolist()[:-1])
+#                         category = tokenizer.map_to_category[idx]
+#                         list_gini.append({"id": idx, "category": category})
+#                     self.metrics[f"gini@{k}"] += GiniCoefficient().calculate_list_gini(
+#                         list_gini, key="category"
+#                     )
+
+#                 # Calculate intra-list diversity if lookup table is provided and ILD is not disabled
+#                 if lookup_table is not None and not DISABLE_ILD:
+#                     # Get embeddings for the topk predictions
+#                     embeddings = []
+#                     #print_verbose(f"\nDEBUG: Starting lookup for batch {b}, k={k}, topk shape: {topk_pred.shape}")
+#                     for i, pred in enumerate(topk_pred):
+#                         #print_verbose(f"DEBUG: Processing pred[{i}]: shape={pred.shape}, dtype={pred.dtype}, values={pred.tolist()}")
+#                         # Only use the first 3 elements of semantic ID for lookup
+#                         semantic_id_prefix = pred[:3] if len(pred) >= 3 else pred
+#                         embedding = lookup_table.lookup(semantic_id_prefix)
+#                         if embedding is not None:
+#                             embeddings.append(embedding)
+#                             #print_verbose(f"DEBUG1: Found embedding for pred[{i}]: shape={embedding.shape}")
+#                         else:
+#                             print_verbose(f"DEBUG2: Embedding NOT found for pred[{i}]")
+
+#                     # Calculate ILD if we have at least 2 embeddings
+#                     if len(embeddings) >= 2:
+#                         embeddings_tensor = torch.stack(embeddings)
+#                         ild_score = IntraListDiversity().calculate_ild(embeddings_tensor)
+#                         self.metrics[f"ild@{k}"] += ild_score
+#                     else:
+#                         # If we have fewer than 2 embeddings, ILD is 0
+#                         self.metrics[f"ild@{k}"] += 0.0
+#                 elif lookup_table is not None and DISABLE_ILD:
+#                     # When ILD is disabled, just set the metric to 0
+#                     self.metrics[f"ild@{k}"] += 0.0
+#         self.total += B
+
 class TopKAccumulator:
     def __init__(self, ks=[1, 5, 10]):
         self.ks = ks
@@ -127,81 +211,83 @@ class TopKAccumulator:
     def reset(self):
         self.total = 0
         self.metrics = defaultdict(float)
-
+        
     @torch._dynamo.disable()
-    def accumulate(self, actual: Tensor, top_k: Tensor, tokenizer=None, lookup_table=None) -> None:
-        # if lookup_table is not None:
-            # print(f"Lookup table: {lookup_table}")
+    def accumulate(
+        self,
+        actual: Tensor,
+        top_k: Tensor,
+        tokenizer=None,
+        lookup_table=None,
+    ):
+        """
+        • Any predicted semantic-id that cannot be found in
+          `tokenizer.map_to_category` (or the lookup-table) is treated as an
+          ordinary *miss* – it simply contributes 0-relevance and gets the
+          pseudo-category "UNKNOWN".
+
+        •  The function therefore never raises `KeyError`.
+        """
         B, D = actual.shape
-        pos_match = rearrange(actual, "b d -> b 1 d") == top_k
-        #print("Actual upto 5",actual[:5])
-        #print("topk upto 5", top_k[:5])
+        pos_match = rearrange(actual, "b d -> b 1 d") == top_k        # (B,k,D)
+
+        # ------------------------------------------------------------------ #
+        # hit-rate & NDCG                                                    #
+        # ------------------------------------------------------------------ #
         for i in range(D):
-            match_found, rank = pos_match[..., : i + 1].all(axis=-1).max(axis=-1)
+            match_found, rank = pos_match[..., : i + 1].all(-1).max(-1)
             matched_rank = rank[match_found]
             for k in self.ks:
-                self.metrics[f"h@{k}_slice_:{i+1}"] += len(
-                    matched_rank[matched_rank < k]
-                )
+                self.metrics[f"h@{k}_slice_:{i+1}"] += (matched_rank < k).sum().item()
 
-            match_found, rank = pos_match[..., i : i + 1].all(axis=-1).max(axis=-1)
+            match_found, rank = pos_match[..., i : i + 1].all(-1).max(-1)
             matched_rank = rank[match_found]
             for k in self.ks:
-                self.metrics[f"h@{k}_pos_{i}"] += len(matched_rank[matched_rank < k])
+                self.metrics[f"h@{k}_pos_{i}"] += (matched_rank < k).sum().item()
 
-        B = actual.size(0)
         for b in range(B):
-            gold_docs = actual[b]
-            pred_docs = top_k[b]
-            #print("Gold", gold_docs)
-            #print("pred_docs", pred_docs)
+            gold = actual[b]
+            preds = top_k[b]
             for k in self.ks:
-                topk_pred = pred_docs[:k]
-                # hits = sum(1 for doc in topk_pred if doc in gold_docs)
-                hits = torch.any(torch.all(topk_pred == gold_docs, dim=1)).item() # fixed hit calculation
-                self.metrics[f"h@{k}"] += float(hits > 0)
+                topk_pred = preds[:k]
+
+                # --- H@k ----------------------------------------------------
+                hit = any((topk_pred == gold).all(1))
+                self.metrics[f"h@{k}"] += float(hit)
+
+                # --- NDCG@k -------------------------------------------------
                 self.metrics[f"ndcg@{k}"] += compute_ndcg_for_semantic_ids(
-                    pred_docs, gold_docs, k
+                    preds, gold, k
                 )
-                # if the tokinzer is given then for each prediction find the catergoy and add it to the list and then caclulate the gini coefficient
+
+                # --- per-list statistics that need tokenizer / lookup -------#
                 if tokenizer is not None:
-                    list_gini = []
-                    for pred in topk_pred:
-                        idx = str(pred.tolist()[:-1])
-                        category = tokenizer.map_to_category[idx]
-                        list_gini.append({"id": idx, "category": category})
-                    self.metrics[f"gini@{k}"] += GiniCoefficient().calculate_list_gini(
-                        list_gini, key="category"
-                    )
+                    # build frequency list for Gini
+                    articles = []
+                    for p in topk_pred:
+                        key = str(p.tolist()[:-1])         # same convention
+                        cat = tokenizer.map_to_category.get(key, "UNKNOWN")
+                        articles.append({"id": key, "category": cat})
+                    self.metrics[f"gini@{k}"] += GiniCoefficient() \
+                                                  .calculate_list_gini(articles)
 
-                # Calculate intra-list diversity if lookup table is provided and ILD is not disabled
+                # --- ILD ----------------------------------------------------
                 if lookup_table is not None and not DISABLE_ILD:
-                    # Get embeddings for the topk predictions
-                    embeddings = []
-                    #print_verbose(f"\nDEBUG: Starting lookup for batch {b}, k={k}, topk shape: {topk_pred.shape}")
-                    for i, pred in enumerate(topk_pred):
-                        #print_verbose(f"DEBUG: Processing pred[{i}]: shape={pred.shape}, dtype={pred.dtype}, values={pred.tolist()}")
-                        # Only use the first 3 elements of semantic ID for lookup
-                        semantic_id_prefix = pred[:3] if len(pred) >= 3 else pred
-                        embedding = lookup_table.lookup(semantic_id_prefix)
-                        if embedding is not None:
-                            embeddings.append(embedding)
-                            #print_verbose(f"DEBUG1: Found embedding for pred[{i}]: shape={embedding.shape}")
-                        else:
-                            print_verbose(f"DEBUG2: Embedding NOT found for pred[{i}]")
-
-                    # Calculate ILD if we have at least 2 embeddings
-                    if len(embeddings) >= 2:
-                        embeddings_tensor = torch.stack(embeddings)
-                        ild_score = IntraListDiversity().calculate_ild(embeddings_tensor)
-                        self.metrics[f"ild@{k}"] += ild_score
+                    embs = []
+                    for p in topk_pred:
+                        prefix = p[:3] if len(p) >= 3 else p
+                        emb = lookup_table.lookup(prefix)
+                        if emb is not None:
+                            embs.append(emb)
+                    if len(embs) >= 2:
+                        ild = IntraListDiversity() \
+                              .calculate_ild(torch.stack(embs))
+                        self.metrics[f"ild@{k}"] += ild
                     else:
-                        # If we have fewer than 2 embeddings, ILD is 0
                         self.metrics[f"ild@{k}"] += 0.0
-                elif lookup_table is not None and DISABLE_ILD:
-                    # When ILD is disabled, just set the metric to 0
-                    self.metrics[f"ild@{k}"] += 0.0
+
         self.total += B
+
 
     def reduce(self) -> dict:
         return {k: v / self.total for k, v in self.metrics.items()}
