@@ -4,7 +4,7 @@
 #SBATCH --gpus=1
 #SBATCH --job-name=eval_amazon
 #SBATCH --time=00:30:00
-#SBATCH --output=./slurm_out/evaluation/Test_%j.out
+#SBATCH --output=./slurm_out/evaluation/Test_Sports_DBS_16_100_L_0_%j.out
 
 #exit if an error occurs
 set -e
@@ -22,8 +22,8 @@ source activate rq-vae
 echo "Evaluation: amazon-beauty"
 python train_decoder.py configs/decoder_amazon.gin
 
-echo "Evaluation: amazon-sports"
-#python train_decoder.py configs/decoder_amazon_sports.gin
+# echo "Evaluation: toys"
+# python train_decoder.py configs/decoder_amazon_toys.gin
 
-echo "Evaluation: amazon-toys"
-#python train_decoder.py configs/decoder_amazon_toys.gin
+# echo "Evaluation: sports"
+# python train_decoder.py configs/decoder_amazon_sports.gin
