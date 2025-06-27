@@ -1,30 +1,29 @@
+# Standard library imports
+from enum import Enum
+from typing import NamedTuple
+
+# Third party imports
 import gin
 import torch
-
 from einops import rearrange
-from enum import Enum
-from data.schemas import TokenizedSeqBatch
-from modules.embedding.id_embedder import SemIdEmbedder
-from modules.embedding.id_embedder import UserIdEmbedder
-from modules.normalize import RMSNorm
-from modules.transformer.attention import AttentionInput
-from modules.transformer.model import TransformerDecoder
-from modules.transformer.model import TransformerEncoderDecoder
-from modules.utils import eval_mode
-from modules.utils import maybe_repeat_interleave
-from modules.utils import reset_encoder_cache
-from modules.utils import reset_kv_cache
-from modules.utils import select_columns_per_row
-from ops.triton.jagged import jagged_to_flattened_tensor
-from ops.triton.jagged import padded_to_jagged_tensor
-from typing import NamedTuple
-from torch import nn
-from torch import Tensor
+from torch import nn, Tensor
 from torch.nn import functional as F
 
-# Needed to make torch.compile succeed
-torch._dynamo.config.suppress_errors = True
-torch.set_float32_matmul_precision("high")
+# Local imports
+from data.schemas import TokenizedSeqBatch
+from modules.embedding.id_embedder import SemIdEmbedder, UserIdEmbedder
+from modules.normalize import RMSNorm
+from modules.transformer.attention import AttentionInput
+from modules.transformer.model import TransformerDecoder, TransformerEncoderDecoder
+from modules.utils import (
+    eval_mode, maybe_repeat_interleave, reset_encoder_cache,
+    reset_kv_cache, select_columns_per_row
+)
+from ops.triton.jagged import jagged_to_flattened_tensor, padded_to_jagged_tensor
+
+# Configure PyTorch for better performance
+torch._dynamo.config.suppress_errors = True  # Required for torch.compile
+torch.set_float32_matmul_precision("high")   # Enable high precision matrix multiplication
 
 
 class ModelOutput(NamedTuple):
@@ -105,24 +104,19 @@ class EncoderDecoderRetrievalModel(nn.Module):
         self.out_proj = nn.Linear(attn_dim, num_embeddings, bias=False)
 
     def _predict(self, batch: TokenizedSeqBatch) -> AttentionInput:
-        #print("okay")
+        # Get embeddings for users and semantic IDs
         user_emb = self.user_id_embedder(batch.user_ids)
-        #print("okay1")
         sem_ids_emb = self.sem_id_embedder(batch)
-        #print("okay2")
         sem_ids_emb, sem_ids_emb_fut = sem_ids_emb.seq, sem_ids_emb.fut
-        #print("okay3")
         seq_lengths = batch.seq_mask.sum(axis=1)
 
         B, N, D = sem_ids_emb.shape
 
-        pos_max = N // self.sem_id_dim
-        # pos = torch.arange(pos_max, device=batch.sem_ids.device).repeat_interleave(self.sem_id_dim)
-
+        # Add positional encodings
         pos = torch.arange(N, device=sem_ids_emb.device).unsqueeze(0)
         wpe = self.wpe(pos)
-        #print("okay5")
 
+        # Combine embeddings
         input_embedding = torch.cat([user_emb, wpe + sem_ids_emb], axis=1)
         input_embedding_fut = self.bos_emb.repeat(B, 1, 1)
         if sem_ids_emb_fut is not None:
@@ -130,8 +124,6 @@ class EncoderDecoderRetrievalModel(nn.Module):
             input_embedding_fut = torch.cat(
                 [input_embedding_fut, sem_ids_emb_fut + tte_fut], axis=1
             )
-        #print("okay6")
-
         if self.jagged_mode:
             input_embedding = padded_to_jagged_tensor(
                 input_embedding,
@@ -159,7 +151,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
             )
             f_mask = torch.zeros_like(mem_mask, dtype=torch.float32)
             f_mask[~mem_mask] = float("-inf")
-        #print("okay7")
+        # Project and normalize embeddings for transformer
         transformer_context = self.in_proj_context(self.do(self.norm(input_embedding)))
         transformer_input = self.in_proj(self.do(self.norm_cxt(input_embedding_fut)))
 
@@ -195,11 +187,9 @@ class EncoderDecoderRetrievalModel(nn.Module):
         assert self.enable_generation, "Model generation is not enabled"
 
         B, N = batch.sem_ids.shape
-        print(f"DEBUG: generate_next_sem_id - batch size: {B}, sem_ids shape: {batch.sem_ids.shape}")
         generated, log_probas = None, 0
         k = 32 if top_k else 1
         n_top_k_candidates = 200 if top_k else 1
-        print(f"DEBUG: generate params - k: {k}, n_top_k_candidates: {n_top_k_candidates}")
 
         input_batch = TokenizedSeqBatch(
             user_ids=batch.user_ids,
@@ -219,9 +209,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
 
             if generated is None:
                 samples_for_verify = samples_batched.unsqueeze(-1)
-                print(f"DEBUG: Verifying samples shape: {samples_for_verify.shape}")
                 is_valid_prefix = self.inference_verifier_fn(samples_for_verify)
-                print(f"DEBUG: Valid prefix count: {is_valid_prefix.sum().item()}/{is_valid_prefix.numel()}")
             else:
                 prefix = torch.cat(
                     [
@@ -232,9 +220,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
                     ],
                     axis=-1,
                 )
-                print(f"DEBUG: Prefix shape for verification: {prefix.shape}")
                 is_valid_prefix = self.inference_verifier_fn(prefix).reshape(B, -1)
-                print(f"DEBUG: Valid prefix count (iteration {i}): {is_valid_prefix.sum().item()}/{is_valid_prefix.numel()}")
 
             sampled_log_probas = torch.log(
                 torch.gather(probas_batched, 1, samples_batched)
@@ -253,7 +239,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
                 sorted_indices[:, :k],
             )
             top_k_samples = torch.gather(samples, 1, top_k_indices)
-            print(f"DEBUG: Top-k samples shape: {top_k_samples.shape}")
+
 
             if generated is not None:
                 parent_id = torch.gather(
@@ -332,11 +318,9 @@ class EncoderDecoderRetrievalModel(nn.Module):
                 generated = top_k_samples.unsqueeze(-1)
                 log_probas = torch.clone(top_k_log_probas.detach())
 
-        print(f"DEBUG: Final generated shape: {generated.shape}, values sample: {generated[0][0].tolist()}")
         result = GenerationOutput(
             sem_ids=generated.squeeze(), log_probas=log_probas.squeeze()
         )
-        print(f"DEBUG: Result sem_ids shape: {result.sem_ids.shape}")
         return result
 
     @torch.compile
@@ -359,7 +343,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
                     "(b n) -> b n",
                     b=B,
                 )
-                base_loss = unred_loss.sum(axis=1).mean() 
+                base_loss = unred_loss.sum(axis=1).mean()
             else:
                 logits = predict_out
                 out = logits[:, :-1, :].flatten(end_dim=1)
@@ -372,10 +356,10 @@ class EncoderDecoderRetrievalModel(nn.Module):
 
             log_probs = F.log_softmax(logits, dim=-1)  # shape: [B*N, vocab_size]
             probs = torch.exp(log_probs)
-            entropy = -torch.sum(probs * log_probs, dim=-1).mean() 
-            λ = 0.05  # Regularization strength, can be tuned
-            loss = base_loss - λ * entropy  # maximizing entropy
-            # loss = base_loss
+            # Calculate entropy and apply regularization
+            entropy = -torch.sum(probs * log_probs, dim=-1).mean()
+            λ = 0.05  # Entropy regularization strength
+            loss = base_loss - λ * entropy  # Maximize entropy
 
 
             loss_d = unred_loss.mean(axis=0) if self.jagged_mode else None

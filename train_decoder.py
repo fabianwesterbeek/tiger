@@ -119,7 +119,7 @@ def train(
         subsample=False,
         split=dataset_split,
     )
-    
+
 
     eval_dataset = SeqData(
         root=dataset_folder,
@@ -142,7 +142,7 @@ def train(
     )
 
     print("Test dataset initialized")
-    
+
 
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -167,9 +167,8 @@ def train(
     )
     print("Tokenizer initialized.")
     tokenizer = accelerator.prepare(tokenizer)
-    # print("DEBUG: Precomputing corpus IDs...")
+    # Precompute corpus IDs for efficient processing
     tokenizer.precompute_corpus_ids(item_dataset)
-    # print("DEBUG: Finished precomputing corpus IDs")
 
     # Create and build lookup table for ILD calculation
     if accelerator.is_main_process:
@@ -178,21 +177,10 @@ def train(
         num_entries = lookup_table.build_lookup_table(item_dataset)
         print(f"Lookup table built with {num_entries} entries")
 
-        # # Debug: Check if lookup table was built properly
-        # sample_item = item_dataset[0]
-        # sample_item_tensor = batch_to(sample_item, device).x
-        # print(f"DEBUG: Sample item tensor shape: {sample_item_tensor.shape}")
-        # with torch.no_grad():
-        #     sem_ids = tokenizer.rq_vae.get_semantic_ids(sample_item_tensor).sem_ids
-        #     print(f"DEBUG: Sample semantic ID shape: {sem_ids.shape}, value: {sem_ids.tolist()}")
-        #     sem_id_tuple = tuple(sem_ids[0].cpu().tolist())
-        #     print(f"DEBUG: Sample semantic ID tuple: {sem_id_tuple}")
-        #     print(f"DEBUG: Is sample ID in lookup table: {sem_id_tuple in lookup_table.id_to_embedding_map}")
     else:
         lookup_table = None
 
-    # -- some debugging --
-    ## Debug information
+    # Print dataset configuration information
     print(f"Dataset split: {dataset_split}")
     print(f"Max sequence length: {train_dataset.max_seq_len}")
     print(f"Semantic IDs dimension: {tokenizer.sem_ids_dim}")
@@ -245,7 +233,7 @@ def train(
     model, optimizer, lr_scheduler = accelerator.prepare(model, optimizer, lr_scheduler)
 
 
-    current_best = 0 
+    current_best = 0
     patience = 5
     patience_counter = 0
 
@@ -261,14 +249,12 @@ def train(
     ) as pbar:
         for iter in range(iterations):
             model.train()
-            # print(f"Training iteration {iter + 1}/{iterations}")
             total_loss = 0
             optimizer.zero_grad()
             for _ in range(gradient_accumulate_every):
                 data = next_batch(train_dataloader, device)
                 tokenized_data = tokenizer(data)
 
-                #with accelerator.autocast():
                 model_output = model(tokenized_data)
                 loss = model_output.loss / gradient_accumulate_every
                 total_loss += loss
@@ -339,7 +325,7 @@ def train(
 
                 patience_counter +=1
 
-                ## We can change the Early stopping metric
+                # Early stopping based on NDCG@5 metric
                 if eval_metrics["ndcg@5"] > current_best:
                     current_best = eval_metrics["ndcg@5"]
                     patience_counter = 0
@@ -394,9 +380,7 @@ def train(
 
             pbar.update(1)
 
-    # best_checkpoint_path = pretrained_decoder_path
-    # state = torch.load(best_checkpoint_path, map_location=device)
-
+    # Load best model state for final testing
     model.load_state_dict(state["model"])
     model.eval()
     model.enable_generation = True
@@ -417,9 +401,7 @@ def train(
             tokenized_data, top_k=True, temperature=1
             )
             actual, top_k = tokenized_data.sem_ids_fut, generated.sem_ids
-            # add the tokinzer
-            #print("pred[0]", generated.sem_ids[0, 0])   # almost certainly [-1 … -1]
-            #print("gold[0]", tokenized_data.sem_ids_fut[0])
+            # Validate generated sequence prefix
             valid = tokenizer.exists_prefix(generated.sem_ids[0, 0].unsqueeze(0))
             print("generated prefix passes verifier ?", valid.item())
             metrics_accumulator.accumulate(actual=actual, top_k=top_k, tokenizer=tokenizer, lookup_table = lookup_table)
@@ -436,42 +418,3 @@ def train(
 if __name__ == "__main__":
     parse_config()
     train()
-
-
-    # Always perform a full evaluation after training completes
-#     model.eval()
-#     model.enable_generation = True
-#     print(f"Performing final full evaluation after training")
-#     with tqdm(
-#         eval_dataloader,
-#         desc=f"Final Evaluation",
-#         disable=not accelerator.is_main_process,
-#         mininterval=1.0,
-#     ) as pbar_eval:
-#         for batch in pbar_eval:
-#             data = batch_to(batch, device)
-#             tokenized_data = tokenizer(data)
-
-#             generated = model.generate_next_sem_id(
-#                 tokenized_data, top_k=True, temperature=1
-#             )
-#             actual, top_k = tokenized_data.sem_ids_fut, generated.sem_ids
-#             # add the tokenizer and lookup table for ILD calculation
-#             metrics_accumulator.accumulate(
-#                 actual=actual, top_k=top_k, tokenizer=tokenizer, lookup_table=lookup_table
-#             )
-#     final_eval_metrics = metrics_accumulator.reduce()
-
-#     print(final_eval_metrics)
-#     if accelerator.is_main_process and wandb_logging:
-#         wandb.log({**final_eval_metrics, "final_evaluation": True})
-
-#     metrics_accumulator.reset()
-
-#     if wandb_logging:
-#         wandb.finish()
-
-
-# if __name__ == "__main__":
-#     parse_config()
-#     train()
