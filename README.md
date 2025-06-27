@@ -125,3 +125,9 @@ TIGER consists of a two-stage recommendation pipeline combining semantic item en
 - **Intra-List Diversity (ILD) Metric**: Added a new evaluation metric that measures the diversity of recommendation lists based on content embeddings, complementing existing Gini coefficient diversity measurements.
 
 - **Additional Datasets**: Extended evaluation to Amazon Pets and Amazon Office product categories to validate the generalizability of our approach across different domains.
+
+---
+
+##  ⚙️ Reproducing the results
+
+Detailed instructions of reproducing the results (both of the reproduction and extensions) can be found in [Reproducibility Instructions](REPRO.md)
