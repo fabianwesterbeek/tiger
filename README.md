@@ -15,9 +15,7 @@
 ---
 
 ## 🧾 Project Abstract
-This repository contains a reproducibility study and diversity-focused extensions for TIGER, a generative retrieval method for recommender systems based on hierarchical semantic ID generation using a seq2seq transformer conditioned on user history.
-
-We find the original results hard to reproduce, with our metrics consistently lower than those reported. To verify robustness, we evaluate the model on additional datasets- Amazon office and Amazon Pets. We additionally explore two diversity-enhancing methods: entropy-based regularization during training and diverse beam search during inference. Entropy regularization shows only marginal and inconsistent gains in diversity. In contrast, diverse beam search significantly improves diversity with minimal performance loss and faster runtime.
+This repository contains a reproducibility study and diversity-focused extensions for TIGER, a generative retrieval approach for recommender systems. The original method introduces a hierarchical semantic ID generation technique using a sequence-to-sequence transformer conditioned on user history. In our study, we encountered significant challenges reproducing the reported results, observing notably lower performance. We also extend the evaluation to additional datasets. To explore diversity in recommendations, we implement two techniques: (1) an entropy-based regularization term in the loss function to encourage diversity during training, and (2) a diverse beam search strategy to promote diverse outputs at inference time. Our findings indicate that entropy-based regularization yields only marginal and inconsistent improvements across datasets. In contrast, diverse beam search consistently enhances recommendation diversity with minimal performance degradation and offers improved inference efficiency.
 
 ---
 
