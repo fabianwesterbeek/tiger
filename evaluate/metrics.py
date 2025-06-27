@@ -130,8 +130,8 @@ class TopKAccumulator:
 
     @torch._dynamo.disable()
     def accumulate(self, actual: Tensor, top_k: Tensor, tokenizer=None, lookup_table=None) -> None:
-        if lookup_table is not None:
-            print(f"Lookup table: {lookup_table}")
+        # if lookup_table is not None:
+            # print(f"Lookup table: {lookup_table}")
         B, D = actual.shape
         pos_match = rearrange(actual, "b d -> b 1 d") == top_k
         #print("Actual upto 5",actual[:5])

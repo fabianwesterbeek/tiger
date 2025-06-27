@@ -375,6 +375,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
             entropy = -torch.sum(probs * log_probs, dim=-1).mean() 
             λ = 0.05  # Regularization strength, can be tuned
             loss = base_loss - λ * entropy  # maximizing entropy
+            # loss = base_loss
 
 
             loss_d = unred_loss.mean(axis=0) if self.jagged_mode else None

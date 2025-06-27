@@ -1,0 +1,20 @@
+#!/bin/bash
+
+#SBATCH --partition=gpu_h100
+#SBATCH --gpus=1
+#SBATCH --job-name=eval_amazon
+#SBATCH --time=36:00:00
+#SBATCH --output=./slurm_out/evaluation/tools_%j.out
+
+#exit if an error occurs
+set -e
+
+module purge
+module load 2024
+module load Miniconda3/24.7.1-0
+module load CUDA/12.6.0
+
+source activate rq-vae
+
+echo "Evaluation: amazon-tools"
+python train_decoder.py configs/decoder_amazon_tools.gin

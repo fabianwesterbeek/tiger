@@ -3,7 +3,7 @@
 #SBATCH --partition=gpu_a100
 #SBATCH --gpus=1
 #SBATCH --job-name=train_amazon
-#SBATCH --time=00:30:00
+#SBATCH --time=05:00:00
 #SBATCH --output=./slurm_out/train/amazon_%j.out
 
 #exit if an error occurs
@@ -18,11 +18,20 @@ export WANDB_API_KEY=0aeeb3ee9b614daf7fc11f473a88a4f0b785a83b
 
 source activate rq-vae
 
-echo "Training: amazon-beauty"
-python train_rqvae.py configs/rqvae_amazon.gin
+# echo "Training: amazon-beauty"
+# python train_rqvae.py configs/rqvae_amazon.gin
 
-echo "Training: amazon-sports"
-#python train_rqvae.py configs/rqvae_amazon_sports.gin
+# echo "Training: amazon-sports"
+# python train_rqvae.py configs/rqvae_amazon_sports.gin
 
-echo "Training: amazon-toys"
+# echo "Training: amazon-toys"
 #python train_rqvae.py configs/rqvae_amazon_toys.gin
+
+# echo "Training: amazon-pets"
+# python train_rqvae.py configs/rqvae_amazon_pets.gin
+
+# echo "Training: amazon-tools"
+# python train_rqvae.py configs/rqvae_amazon_tools.gin
+
+echo "Training: amazon-office"
+python train_rqvae.py configs/rqvae_amazon_office.gin

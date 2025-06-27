@@ -2,10 +2,11 @@ __pycache__
 dataset
 out
 wandb
-configs/
-job_scripts/
+# job_scripts/
 trained_models/transformer*
 tl_out
 slurm_out
 .DS_Store
 .vscode/
+*.ipynb
+.venv
