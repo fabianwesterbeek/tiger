@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 from torch.optim import Adam
 import pandas as pd
-
+import os
 from utils import recall_at_k, ndcg_k, get_metric
 
 
@@ -39,8 +39,10 @@ class Trainer:
         print("Total Parameters:", sum([p.nelement() for p in self.model.parameters()]))
         self.criterion = nn.BCELoss()
 
+        #print(os.getcwd())
+
         asin2cat_df = pd.read_csv(
-            "/home/scur2721/seater/SEATER_Generative_Retrieval/data/Toys/dataset/asin2category.tsv",
+            self.args.data_name + "/asin2category.tsv",
             sep="\t",
             header=None,
             engine="pyarrow"  # optional; use only if needed for performance
@@ -49,8 +51,9 @@ class Trainer:
         self.asin2category = dict(zip(asin2cat_df['asin'], asin2cat_df['category']))
 
         # Load asin2id.tsv (no headers)
+        
         asin2idx_df = pd.read_csv(
-            "/home/scur2721/seater/SEATER_Generative_Retrieval/data/Toys/dataset/asin2idx.tsv",
+            self.args.data_name +"/asin2idx.tsv",
             sep="\t",
             header=None,
             engine="pyarrow"
