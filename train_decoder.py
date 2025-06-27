@@ -69,6 +69,7 @@ def train(
     strategy="default",
     dbg_groups=4,
     dbg_lambda=0.0,
+    eval=False,
 ):
     if dataset != RecDataset.AMAZON:
         raise Exception(f"Dataset currently not supported: {dataset}.")
@@ -387,7 +388,11 @@ def train(
             pbar.update(1)
 
     # Load best model state for final testing
-    model.load_state_dict(state["model"])
+    if not eval:
+        model.load_state_dict(state["model"])
+    else:
+        best_checkpoint = pretrained_decoder_path
+        model.load_state_dict(torch.load(best_checkpoint, map_location=device, weights_only=False)['model'])
     model.eval()
     model.enable_generation = True
     metrics_accumulator.reset()

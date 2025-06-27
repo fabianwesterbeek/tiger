@@ -1,7 +1,7 @@
 import data.processed
 import modules.model
 
-train.iterations=200000
+train.iterations=0
 train.learning_rate=0.0003
 train.weight_decay=0.035
 train.batch_size=256
@@ -35,5 +35,5 @@ train.category="brand"
 
 train.strategy="dbs"
 train.dbg_groups=4
-train.dbg_lambda=0
-train.entropy_lambda=0.1
+train.dbg_lambda=5
+train.eval=True
