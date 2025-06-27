@@ -1,4 +1,4 @@
-# 📘 Project Title
+# 📘 Diversity and Uncertainty: Enhancing Generative Recommender Systems with Diverse Beam Search and Entropy Regularization
 
 
 ## 🧑‍💻 Team Members
@@ -12,11 +12,12 @@
 - Yubao Tang (Main Supervisor)
 - Owen de Jong (Co-supervisor)
 
-
 ---
 
 ## 🧾 Project Abstract
-_Provide a concise summary of your project, including the type of recommender system you're building, the key techniques used, and a brief two sentence summary of results._
+This repository contains a reproducibility study and diversity-focused extensions for TIGER, a generative retrieval method for recommender systems based on hierarchical semantic ID generation using a seq2seq transformer conditioned on user history.
+
+We find the original results hard to reproduce, with our metrics consistently lower than those reported. To verify robustness, we evaluate the model on additional datasets- Amazon office and Amazon Pets. We additionally explore two diversity-enhancing methods: entropy-based regularization during training and diverse beam search during inference. Entropy regularization shows only marginal and inconsistent gains in diversity. In contrast, diverse beam search significantly improves diversity with minimal performance loss and faster runtime.
 
 ---
 
@@ -55,14 +56,17 @@ _Provide the following for all datasets, including the attributes you are consid
 
 ## 📏 Metrics
 
-_Explain why these metrics are appropriate for your recommendation task and what they are measuring briefly._
+- Hit Rate (H@k)
+  - Description: Measures whether the ground truth item appears in the top-k recommendations, indicating the model's ability to recall relevant items.
 
-- [ ] Metric #1
-  - [ ] Description:
-- [ ] Intra-List Diversity (ILD)
-  - [ ] Description: Measures the diversity of recommendations by calculating the average pairwise cosine distance between content embeddings of recommended items. Higher values indicate more diverse recommendations.
+- Normalized Discounted Cumulative Gain (NDCG@k)
+  - Description: Evaluates the quality of ranking by giving higher weight to correctly ranked items that appear earlier in the recommendation list.
 
+- Intra-List Diversity (ILD)
+  - Description: Measures the diversity of recommendations by calculating the average pairwise cosine distance between content embeddings of recommended items. Higher values indicate more diverse recommendations.
 
+- Gini Coefficient
+  - Description: Assesses the equality of representation across different item categories in the recommendations. Lower values indicate more balanced representation of different categories.
 
 ---
 
@@ -76,17 +80,37 @@ Describe each baseline
 
 ### 🧠 High-Level Description of Method
 
-_Explain your approach in simple terms. Describe your model pipeline: data input → embedding/representation → prediction → ranking. Discuss design choices, such as use of embeddings, neural networks, or attention mechanisms._
+TIGER consists of a two-stage recommendation pipeline combining semantic item encoding and generative sequence modeling.
+
+1. **Data Input**: Each user session consists of a sequence of item interactions along with contextual metadata (e.g. item categories).
+
+2. **Embedding / Representation**:
+   We train a **Residual Quantized Variational Autoencoder (RQ-VAE)** to encode items (and their context) into a hierarchical sequence of **semantic IDs**. These IDs capture high-level semantic structure in the item space, enabling compact, discrete representations suitable for generative modeling.
+
+3. **Prediction via Generative Modeling**:
+   A **sequence-to-sequence generative model** (a Transformer based encoder-decoder) is trained to model the sequence of semantic IDs. It takes a user's past interaction history (represented as semantic IDs) as input tokens and predicts the next ID in the sequence. During training, an **entropy-regularized loss** may be applied to encourage the model to produce a broader probability distribution over candidate IDs, promoting diversity.
+
+4. **Decoding and Ranking**:
+   At inference time, we decode the model output using either:
+
+   * **Standard Beam Search**, which selects the most likely continuations, or
+   * **Diverse Beam Search**, which penalizes similar hypotheses to promote diversity in the top-N beams.
+
+   The top predicted semantic IDs are then **mapped back to items**, and the corresponding items are recommended to the user.
+
+5. **Evaluation**:
+   In addition to conventional accuracy metrics, we incorporate the **Intra-List Diversity (ILD)** and **Gini coefficient** metrics to evaluate the semantic diversity of recommendation lists.
 
 ---
 
 ## 🌱 Proposed Extensions
 
-_List & briefly describe the extensions that you made to the original method, including extending evaluation e.g., other metrics or new datasets considered._
+- **Entropy-based Regularization**: Added an entropy term to the loss function during training to encourage more diverse token distributions, which leads to more varied recommendations without sacrificing accuracy.
 
-- Semantic ID to Content Embedding Lookup Table: Implemented a lookup table that maps semantic IDs to their corresponding content embeddings, enabling efficient retrieval and additional metrics.
-- Intra-List Diversity (ILD) Metric: Added a new evaluation metric that measures the diversity of recommendation lists based on content embeddings, complementing existing Gini coefficient diversity measurements.
+- **Diverse Beam Search Decoding**: Implemented an enhanced beam search algorithm that promotes diversity by penalizing similar paths in the beam search tree, resulting in more varied recommendation lists.
 
+- **Semantic ID to Content Embedding Lookup Table**: Implemented a lookup table that maps semantic IDs to their corresponding content embeddings, enabling efficient retrieval and additional metrics calculation.
 
+- **Intra-List Diversity (ILD) Metric**: Added a new evaluation metric that measures the diversity of recommendation lists based on content embeddings, complementing existing Gini coefficient diversity measurements.
 
-
+- **Additional Datasets**: Extended evaluation to Amazon Pets and Amazon Office product categories to validate the generalizability of our approach across different domains.
