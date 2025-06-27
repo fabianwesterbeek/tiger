@@ -84,7 +84,10 @@ _Provide the following for all datasets, including the attributes you are consid
 ## 🔬 Baselines
 
 - [SASRec](https://github.com/pmixer/SASRec.pytorch)
-- [S3Rec](https://github.com/aHuiWang/CIKM2020-S3Rec/tree/master)
+SASRec (Self-Attentive Sequential Recommendation) is a self-attention based sequential model that adaptively assigns weights to a user’s recent interactions to predict the next item. It combines the long-term modeling capacity of RNNs with the efficiency of Markov chains. It uses a left-to-right Transformer encoder for interpretability and speed, outperforming state-of-the-art CNN/RNN methods on both sparse and dense datasets.
+
+- [S³Rec](https://github.com/aHuiWang/CIKM2020-S3Rec/tree/master)
+S³Rec (Self-Supervised Sequential Recommendation) incorporates self-supervised learning into sequential recommendation by devising four auxiliary tasks that maximize mutual information across attributes, items, subsequences, and full sequences to enrich representations and alleviate data sparsity. After pre-training on these self-supervised objectives, it fine-tunes on the next-item prediction task, yielding significant gains in low-data settings and demonstrating the effectiveness of self-supervised pre-training in recommendation.
 
 
 ### 🧠 High-Level Description of Method
