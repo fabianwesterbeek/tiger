@@ -81,12 +81,10 @@ _Provide the following for all datasets, including the attributes you are consid
 
 ---
 
-## 🔬 Baselines & Methods
+## 🔬 Baselines
 
-_Describe each baseline, primary methods, and how they are implemented. Mention tools/frameworks used (e.g., Surprise, LightFM, RecBole, PyTorch)._
-Describe each baseline
-- [ ] [Baseline 1](Link-to-reference)
-- [ ] [Baseline 2](Link-to-reference)
+- [SASRec](https://github.com/pmixer/SASRec.pytorch)
+- [S3Rec](https://github.com/aHuiWang/CIKM2020-S3Rec/tree/master)
 
 
 ### 🧠 High-Level Description of Method
