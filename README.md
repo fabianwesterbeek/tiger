@@ -4,7 +4,7 @@
 ## 🧑‍💻 Team Members
 
 - Fabian Weterbeek – fabian.westerbeek@student.uva.nl
-- Bhavesh Sood – bhavesh.sood@student.uva.nl 
+- Bhavesh Sood – bhavesh.sood@student.uva.nl
 - Kshitiz Sharma – kshitiz.sharma2@student.uva.nl
 - Maxim Voronin - maxim.voronin@student.uva.nl
 
@@ -22,7 +22,7 @@ This repository contains a reproducibility study and diversity-focused extension
 ## 📊 Summary of Results
 
 
-### Reproducability 
+### Reproducibility
 
 _Summarize your key reproducability findings in bullet points._
 
@@ -51,17 +51,45 @@ The task is framed as a **sequence generation problem**, where the model is trai
 ---
 
 ## 📂 Datasets
+### 🧹 Preprocessing
+1. **Data Loading**: Downloads and loads user sequences (`sequential_data.txt`) and item metadata (`meta.json.gz`) from Google Drive.
 
-_Provide the following for all datasets, including the attributes you are considering to measure things like item fairness (for example)_:
+2. **Train-Test Split**: Splits sequences into train (all but last 2), eval (second-last), and test (last); enforces max sequence length (20).
 
-- [ ] [Dataset Name](Link-to-dataset-DOI-or-URL)
-  - [ ] Pre-processing: e.g., Removed items with fewer than 5 interactions, and users with fewer than 5 interactions
-  - [ ] Subsets considered: e.g., Cold Start (5-10 items)
-  - [ ] Dataset size: # users, # items, sparsity:
-  - [ ] Attributes for user fairness (only include if used):
-  - [ ] Attributes for item fairness (only include if used):
-  - [ ] Attributes for group fairness (only include if used):
-  - [ ] Other attributes (only include if used):
+3. **Item Feature Embedding**: Combines item metadata (title, brand, categories, price) into text, encodes with `sentence-t5-xl` to 768-dim embeddings.
+
+4. **Brand Mapping**: Assigns brand IDs to items and stores the brand-to-ID mapping.
+
+5. **Dataset Creation**: Builds PyTorch datasets:
+
+   * `ItemData` for item-level tasks (e.g., RQVAE)
+   * `SeqData` for sequence-level tasks
+
+6. **Graph Formatting**: Structures data as a `HeteroData` graph with padded sequences, item features, and brand IDs.
+
+7. **Training Input**: For RQVAE, uses `ItemData` with item features and brand IDs, organized via `SeqBatch`.
+
+8. **Batching**: Creates training batches, moves data to device, uses 20k item samples if applying kmeans to initialize codebooks.
+
+9. **RQVAE-Specific Processing**: Uses only item features, applies semantic tokenization, and tracks codebook statistics (usage, entropy, duplication) to ensure diversity.
+
+### 📦 Dataset Information
+The following [five Amazon datasets](https://nijianmo.github.io/amazon/#complete-data) were used to train and evaluate the models:
+
+- 💄 **Beauty**
+  📈 **Users:** 22,363  📦 **Items:** 12,101
+
+- 🏋️ **Sports and Outdoors**
+  📈 **Users:** 35,598  📦 **Items:** 18,357
+
+- 🧸 **Toys and Games**
+  📈 **Users:** 19,412  📦 **Items:** 11,924
+
+- 🐾 **Pets**
+  📈 **Users:** 29,294  📦 **Items:** 40,932
+
+- 🖇️ **Office**
+  📈 **Users:** 14,888  📦 **Items:** 30,664
 
 ---
 
@@ -90,7 +118,7 @@ _Provide the following for all datasets, including the attributes you are consid
  (Self-Supervised Sequential Recommendation) incorporates self-supervised learning into sequential recommendation by devising four auxiliary tasks that maximize mutual information across attributes, items, subsequences, and full sequences to enrich representations and alleviate data sparsity. After pre-training on these self-supervised objectives, it fine-tunes on the next-item prediction task, yielding significant gains in low-data settings and demonstrating the effectiveness of self-supervised pre-training in recommendation.
 
 
-### 🧠 High-Level Description of Method
+## 🧠 Method
 
 TIGER consists of a two-stage recommendation pipeline combining semantic item encoding and generative sequence modeling.
 
@@ -115,7 +143,7 @@ TIGER consists of a two-stage recommendation pipeline combining semantic item en
 
 ---
 
-## 🌱 Proposed Extensions
+## 🌱 Our Extensions
 
 - **Entropy-based Regularization**: Added an entropy term to the loss function during training to encourage more diverse token distributions, which leads to more varied recommendations without sacrificing accuracy.
 
