@@ -74,22 +74,17 @@ The task is framed as a **sequence generation problem**, where the model is trai
 9. **RQVAE-Specific Processing**: Uses only item features, applies semantic tokenization, and tracks codebook statistics (usage, entropy, duplication) to ensure diversity.
 
 ### 📦 Dataset Information
+
 The following [five Amazon datasets](https://nijianmo.github.io/amazon/#complete-data) were used to train and evaluate the models:
 
-- 💄 **Beauty**
-  📈 **Users:** 22,363  📦 **Items:** 12,101
+| Dataset               | Users   | Items   |
+|-----------------------|---------|---------|
+| 💄 **Beauty**         | 22,363  | 12,101  |
+| 🏋️ **Sports & Outdoors** | 35,598  | 18,357  |
+| 🧸 **Toys & Games**    | 19,412  | 11,924  |
+| 🐾 **Pets**           | 29,294  | 40,932  |
+| 🖇️ **Office**         | 14,888  | 30,664  |
 
-- 🏋️ **Sports and Outdoors**
-  📈 **Users:** 35,598  📦 **Items:** 18,357
-
-- 🧸 **Toys and Games**
-  📈 **Users:** 19,412  📦 **Items:** 11,924
-
-- 🐾 **Pets**
-  📈 **Users:** 29,294  📦 **Items:** 40,932
-
-- 🖇️ **Office**
-  📈 **Users:** 14,888  📦 **Items:** 30,664
 
 ---
 
