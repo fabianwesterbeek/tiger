@@ -53,6 +53,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
         strategy: str = "default",
         dbg_groups: int = 4,  # For DBS
         dbg_lambda: float = 0.0,  # For DBS
+        entropy_lambda: float = 0.1,  # For entropy regularization
     ) -> None:
         super().__init__()
 
@@ -108,6 +109,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
 
         self.dbg_groups = dbg_groups
         self.dbg_lambda = dbg_lambda
+        self.entropy_lambda = entropy_lambda
 
         strategies = {"default": self.generate_next_sem_id_default, "dbs": self.generate_next_sem_id_dbs}
         if strategy not in strategies:
@@ -411,7 +413,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
                                  device=batch.sem_ids.device)
         first_tokens, first_logp = [], []                   # collect per group
         for g in range(self.dbg_groups):
-            scores = logp_top0 - self.dbg_lambda * div_counts.gather(1, tok_top0)
+            scores = logp_top0 - self.dbg_lambda * div_counts.gather(1, tok_top0) - self.entropy_lambda * entropy_penalty
             scores = scores.masked_fill(~valid0, -1e4)
             best_lp, best_idx = scores.topk(k_per_group, dim=-1)
             best_tok = torch.gather(tok_top0, 1, best_idx)  # (B, k′)
@@ -483,7 +485,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
 
                 if g > 0:
                     penalty = div_counts.gather(1, cand_tok)
-                    cand_scores = cand_scores - self.dbg_lambda * penalty
+                    cand_scores = cand_scores - self.dbg_lambda * penalty - self.entropy_lambda * entropy_penalty
 
                 prefix_scores = log_probas[:, b0:b1].unsqueeze(-1) \
                                               .expand(-1, -1, C) \
@@ -525,7 +527,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
             sem_ids   = generated.squeeze(),
             log_probas= log_probas.squeeze(),
         )
-    
+
 
     @torch.compile
     def forward(self, batch: TokenizedSeqBatch) -> ModelOutput:
@@ -586,8 +588,8 @@ class EncoderDecoderRetrievalModel(nn.Module):
 
         return ModelOutput(loss=loss, logits=logits, loss_d=loss_d)
 
-    
-    
+
+
 
 
     # --------------------------------------------------------------------
@@ -669,7 +671,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
 
 
 
-    
+
 
 
 
@@ -868,9 +870,9 @@ class EncoderDecoderRetrievalModel(nn.Module):
 #             )
 
 #         return transformer_output
-    
 
-    
+
+
 #     # ----------------------------------------------------------------------
 #     # Constrained beam search – always produces sem_id_dim tokens and
 #     # guarantees every intermediate prefix exists in the tokenizer cache.
@@ -883,11 +885,11 @@ class EncoderDecoderRetrievalModel(nn.Module):
 #         temperature: float = 1.0,
 #     ) -> Tuple[Tensor, Tensor]:
 #         B, D   = batch.sem_ids.size(0), self.sem_id_dim
-#         dev    = batch.sem_ids.device   
+#         dev    = batch.sem_ids.device
 
 #         beams: List[List[_Hyp]] = [[_Hyp(torch.empty(0, dtype=torch.long, device=dev),
 #                                          torch.tensor(0.0, device=dev))]
-#                                    for _ in range(B)]   
+#                                    for _ in range(B)]
 
 #         # helper: first vocab token that passes the verifier
 #         def _first_valid(row_logp: Tensor, hyp: _Hyp) -> Tuple[Tensor, Tensor]:
@@ -896,11 +898,11 @@ class EncoderDecoderRetrievalModel(nn.Module):
 #                 if self.inference_verifier_fn(cand_seq[None, :]):
 #                     return idx, row_logp[idx]
 #             idx = torch.argmax(row_logp)       # fallback – should be unreachable
-#             return idx, row_logp[idx]   
+#             return idx, row_logp[idx]
 
 #         for _ in range(D):
 #             # ── 1. build a (B,D) tensor with the *best* prefix of every batch elt
-#             pref = torch.stack([_pad(b[0].seq, D) for b in beams])  
+#             pref = torch.stack([_pad(b[0].seq, D) for b in beams])
 
 #             in_batch = TokenizedSeqBatch(
 #                 user_ids=batch.user_ids,
@@ -912,11 +914,11 @@ class EncoderDecoderRetrievalModel(nn.Module):
 #             )
 #             if self.jagged_mode:
 #                 # cached encoder has wrong batch size → flush
-#                 self.transformer.cached_enc_output = None   
+#                 self.transformer.cached_enc_output = None
 
 #             logits  = self.forward(in_batch).logits                     # (B,V)
 #             logp    = F.log_softmax(logits / temperature, dim=-1)
-#             top_lp, top_ix = torch.topk(logp, beam_width, dim=-1)       # (B,k) 
+#             top_lp, top_ix = torch.topk(logp, beam_width, dim=-1)       # (B,k)
 
 #             new_beams: List[List[_Hyp]] = [[] for _ in range(B)]
 #             for i in range(B):
@@ -933,13 +935,13 @@ class EncoderDecoderRetrievalModel(nn.Module):
 #                     # ── 3. NONE of the top-k survived → force the first   ✓
 #                     if added == 0:
 #                         tok, lp = _first_valid(logp[i], hyp)
-#                         new_beams[i].append(hyp.extend(tok, lp))    
+#                         new_beams[i].append(hyp.extend(tok, lp))
 
 #                 # keep best `beam_width`
 #                 new_beams[i] = sorted(new_beams[i],
 #                                       key=lambda h: h.logp.item(),
 #                                       reverse=True)[: beam_width]
-#             beams = new_beams   
+#             beams = new_beams
 
 #         # ── 4. stack results --------------------------------------------------
 #         out_ids = torch.stack([
@@ -992,7 +994,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
 #                     "(b n) -> b n",
 #                     b=B,
 #                 )
-#                 base_loss = unred_loss.sum(axis=1).mean() 
+#                 base_loss = unred_loss.sum(axis=1).mean()
 #             else:
 #                 logits = predict_out
 #                 out = logits[:, :-1, :].flatten(end_dim=1)
@@ -1005,7 +1007,7 @@ class EncoderDecoderRetrievalModel(nn.Module):
 
 #             log_probs = F.log_softmax(logits, dim=-1)  # shape: [B*N, vocab_size]
 #             probs = torch.exp(log_probs)
-#             entropy = -torch.sum(probs * log_probs, dim=-1).mean() 
+#             entropy = -torch.sum(probs * log_probs, dim=-1).mean()
 #             λ = 0.05  # Regularization strength, can be tuned
 #             loss = base_loss - λ * entropy  # maximizing entropy
 

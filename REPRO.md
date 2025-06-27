@@ -55,7 +55,19 @@ All your dataset is being downloaded and prepared by the code in the folder `dat
 
 ## ⚙️ Configuration
 
-Set your parameters in the config file before training. As a training configuration example see `configs/rqvae_amazon.gin` and for evaluation configuration example see `configs/decoder_amazon.gin`
+Set your parameters in the config file before training. As a training configuration example see `configs/rqvae_amazon.gin` and for evaluation configuration example see `configs/decoder_amazon.gin`.
+
+### Extensions
+
+#### Diverse Beam Search
+To enable Diverse Beam Search, set the following parameters in the decoder configuration file (e.g., `configs/decoder_amazon.gin`):
+- `train.strategy="dbs"`
+- `train.dbg_groups=<number_of_groups>` (e.g., `4`)
+- `train.dbg_lambda=<lambda_value>` (e.g., `0.1`)
+
+#### Entropy-Regularised Loss
+To enable Entropy-Regularised loss, set the following parameter in the decoder configuration file (e.g., `configs/decoder_amazon.gin`):
+- `train.entropy_lambda=<lambda_value>` (e.g., `0.1`)
 
 
 ---
