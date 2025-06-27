@@ -106,7 +106,6 @@ If you dont have both then delete the dataset folder and re-run it so that the c
 
 ---
 
----
 # Important Implementation Note
 ## Reproducibility Considerations
 According to the creator of the open-sourced implementation used ([issue #41](https://github.com/EdoardoBotta/RQ-VAE-Recommender/issues/41)), exact numerical results are not reproducible. This is expected in this implementation and does not invalidate the reproducibility assessment. This likely is the result of inconsistent RQ-VAE training, where the utilisation of the codebook is not adequate.
