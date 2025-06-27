@@ -115,7 +115,6 @@ According to the creator of the open-sourced implementation used ([issue #41](ht
 
 This project repository uses the following frameworks / refers to the following papers:
 
-- [github repository](https://github.com/EdoardoBotta/RQ-VAE-Recommender)
-- [paper](https://arxiv.org/abs/2305.05065)
-
+- [Recommender Systems with Generative Retrieval](https://arxiv.org/abs/2305.05065)
+- [Open-sourced implementation of TIGER](https://github.com/EdoardoBotta/RQ-VAE-Recommender)
 
