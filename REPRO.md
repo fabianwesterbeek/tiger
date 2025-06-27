@@ -92,6 +92,8 @@ sbatch job_scripts/run_training_amazon.job
 
 ## 📈 Evaluation
 
+### After Training
+
 After training, evaluate all models with:
 
 ```bash
@@ -103,6 +105,24 @@ Alternatively, execute the following slurm job:
 ```bash
 sbatch job_scripts/run_evaluation_amazon.job
 ```
+
+### 🔍 Evaluation Without Training
+
+To evaluate a model without training the decoder, you need to:
+
+1. Modify your configuration file (e.g., `configs/decoder_amazon.gin`) with the following settings:
+   - Set `train.iterations = 0` to skip training
+   - Set `train.eval = True` to enable evaluation mode
+   - Set the pretrained model paths:
+     - `train.pretrained_rqvae_path = "path/to/pretrained/rqvae"`
+     - `train.pretrained_decoder_path = "path/to/pretrained/decoder"`
+
+2. Run the evaluation command:
+   ```bash
+   python train_decoder.py configs/your_modified_config.gin
+   ```
+
+When `pretrained_decoder_path` is set and `train.eval=True`, the checkpoint for evaluation will be loaded directly from the specified path, skipping the training process entirely.
 
 ---
 
