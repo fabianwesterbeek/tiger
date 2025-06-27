@@ -130,4 +130,4 @@ TIGER consists of a two-stage recommendation pipeline combining semantic item en
 
 ##  ⚙️ Reproducing the results
 
-Detailed instructions of reproducing the results (both of the reproduction and extensions) can be found in [Reproducibility Instructions](REPRO.md)
+Detailed instructions of reproducing the results (both of the reproduction and extensions), including the setup of datasets and environments, can be found in [Reproducibility Instructions](REPRO.md).
