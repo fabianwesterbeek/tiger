@@ -15,7 +15,7 @@
 ---
 
 ## 🧾 Project Abstract
-This repository contains a reproducibility study and diversity-focused extensions for TIGER [1](#ref1), a generative retrieval approach for recommender systems. The original method introduces a hierarchical semantic ID generation technique using a sequence-to-sequence transformer conditioned on user history. In our study, we encountered significant challenges reproducing the reported results, observing notably lower performance. We also extend the evaluation to additional datasets. To explore diversity in recommendations, we implement two techniques: (1) an entropy-based regularization term in the loss function to encourage diversity during training, and (2) a diverse beam search strategy to promote diverse outputs at inference time. Our findings indicate that entropy-based regularization yields only marginal and inconsistent improvements across datasets. In contrast, diverse beam search consistently enhances recommendation diversity with minimal performance degradation and offers improved inference efficiency.
+This repository contains a reproducibility study and diversity-focused extensions for TIGER [[1]](#ref1), a generative retrieval approach for recommender systems. The original method introduces a hierarchical semantic ID generation technique using a sequence-to-sequence transformer conditioned on user history. In our study, we encountered significant challenges reproducing the reported results, observing notably lower performance. We also extend the evaluation to additional datasets. To explore diversity in recommendations, we implement two techniques: (1) an entropy-based regularization term in the loss function to encourage diversity during training, and (2) a diverse beam search strategy to promote diverse outputs at inference time. Our findings indicate that entropy-based regularization yields only marginal and inconsistent improvements across datasets. In contrast, diverse beam search consistently enhances recommendation diversity with minimal performance degradation and offers improved inference efficiency.
 
 ---
 
@@ -107,10 +107,10 @@ The following [five Amazon datasets](https://nijianmo.github.io/amazon/#complete
 ## 🔬 Baselines
 
 - [SASRec](https://github.com/pmixer/SASRec.pytorch)
- [2](#ref2) (Self-Attentive Sequential Recommendation) is a self-attention based sequential model that adaptively assigns weights to a user’s recent interactions to predict the next item. It combines the long-term modeling capacity of RNNs with the efficiency of Markov chains. It uses a left-to-right Transformer encoder for interpretability and speed, outperforming state-of-the-art CNN/RNN methods on both sparse and dense datasets.
+ [[2]](#ref2) (Self-Attentive Sequential Recommendation) is a self-attention based sequential model that adaptively assigns weights to a user’s recent interactions to predict the next item. It combines the long-term modeling capacity of RNNs with the efficiency of Markov chains. It uses a left-to-right Transformer encoder for interpretability and speed, outperforming state-of-the-art CNN/RNN methods on both sparse and dense datasets.
 
 - [S³Rec](https://github.com/aHuiWang/CIKM2020-S3Rec/tree/master)
- [3](#ref3) (Self-Supervised Sequential Recommendation) incorporates self-supervised learning into sequential recommendation by devising four auxiliary tasks that maximize mutual information across attributes, items, subsequences, and full sequences to enrich representations and alleviate data sparsity. After pre-training on these self-supervised objectives, it fine-tunes on the next-item prediction task, yielding significant gains in low-data settings and demonstrating the effectiveness of self-supervised pre-training in recommendation.
+ [[3]](#ref3) (Self-Supervised Sequential Recommendation) incorporates self-supervised learning into sequential recommendation by devising four auxiliary tasks that maximize mutual information across attributes, items, subsequences, and full sequences to enrich representations and alleviate data sparsity. After pre-training on these self-supervised objectives, it fine-tunes on the next-item prediction task, yielding significant gains in low-data settings and demonstrating the effectiveness of self-supervised pre-training in recommendation.
 
 
 ## 🧠 Method
