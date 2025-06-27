@@ -6,10 +6,10 @@ class GiniCoefficient:
     A class to calculate the Gini coefficient, a measure of income inequality.
     The Gini coefficient ranges from 0 (perfect equality) to 1 (perfect inequality).
     """
-    def __init__(self):
+    def __init__(self, name = "Beauty"):
         # Load asin2category.tsv (no headers)
         asin2cat_df = data_utils.load_tsv_file(
-            "/home/scur2721/seater/SEATER_Generative_Retrieval/data/Beauty/dataset",
+            f"data/{name}/dataset",
             "asin2category.tsv",
             sep="\t",
             header=None,  # No header
@@ -20,7 +20,7 @@ class GiniCoefficient:
 
         # Load asin2id.tsv (no headers)
         asin2idx_df = data_utils.load_tsv_file(
-            "/home/scur2721/seater/SEATER_Generative_Retrieval/data/Beauty/dataset",
+            f"data/{name}/dataset",
             "asin2idx.tsv",
             sep="\t",
             header=None,

@@ -231,7 +231,7 @@ class Trainer(object):
 
             # comi_ndcg = eva(pre = group_pred_items, ground_truth = group_next_items, comi_ndcg=True)
             #print(self.model.item_feat)
-            res = eva(pre = group_pred_items, ground_truth = group_next_items, comi_ndcg=False, ild=True, ild_rep=self.model.item_feat, calcGini=True)
+            res = eva(pre = group_pred_items, ground_truth = group_next_items, comi_ndcg=False, ild=True, ild_rep=self.model.item_feat, calcGini=True, name=self.dm.dataset_name)
 
             return res
         

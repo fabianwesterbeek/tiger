@@ -3,10 +3,10 @@ from utils.intra_list_diversity import ILD
 from utils.gini_coefficient import GiniCoefficient
 import torch
 
-def eva(pre, ground_truth, comi_ndcg=False, ild = False, ild_rep=None, calcGini=False):
+def eva(pre, ground_truth, comi_ndcg=False, ild = False, ild_rep=None, calcGini=False, name="Beauty"):
 
     hit5, recall5, NDCG5, hit10, recall10, NDCG10, gini5, gini10 = (0, 0, 0, 0, 0, 0, 0, 0)
-    Gini = GiniCoefficient()
+    Gini = GiniCoefficient(name=name)
     epsilon = 0.1 ** 10
 
     for i in range(len(ground_truth)):
