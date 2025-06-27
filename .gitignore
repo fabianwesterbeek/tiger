@@ -9,4 +9,6 @@ slurm_out
 .DS_Store
 .vscode/
 *.ipynb
-.venv
+CIKM2020-S3Rec/*.out
+CIKM2020-S3Rec/output/
+CIKM2020-S3Rec/reproduce/

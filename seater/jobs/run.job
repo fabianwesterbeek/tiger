@@ -1,0 +1,29 @@
+#!/bin/bash
+
+#SBATCH --partition=gpu_a100
+#SBATCH --gpus=1
+#SBATCH --job-name=RunSEATER
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --time=02:30:00
+#SBATCH --output=beauty_sasrec_%A.out
+
+module purge
+module load 2024
+module load Miniconda3/24.7.1-0
+module load jax/0.3.14-foss-2022a-CUDA-11.7.0
+module load CUDA/12.6.0
+
+# Activate your environment
+source activate seater
+export CUDA_LAUNCH_BLOCKING=1
+# Go to the directory that contains the project, the runnable
+cd $HOME/tiger/seater/SEATER_Generative_Retrieval
+#pip list
+
+# Books
+srun python main.py --name SEATER_Books --dataset_name Beauty --num_workers 2 --gpu_id 0 --model SASREC --vocab 16 --batch_size 1024 --test_batch_size 256 --epochs 60 --no-use_wandb
+# srun python main.py --name SEATER_Books --dataset_name Yelp --num_workers 16 --gpu_id 0 --model SASREC --vocab 8 --batch_size 256 --test_batch_size 256 --epochs 50
+
+# cd $HOME/seater/SEATER_Generative_Retrieval/data/Yelp
+# srun python preprocessing.py
