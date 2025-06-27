@@ -96,9 +96,11 @@ sbatch job_scripts/run_evaluation_amazon.job
 
 ## ⚙️ Gini Coefficient & Intra-list Diversity (ILD)
 
-You can use the diversity metrics only if 
-    1. You have a category and you have defined it in the .gin configuration
-    2. You have not created the dataset
+You can use the diversity metrics only if:
+
+1. You have a category and you have defined it in the .gin configuration  
+2. You have not created the dataset
+
 
 If you dont have both then delete the dataset folder and re-run it so that the categories can be created!
 
