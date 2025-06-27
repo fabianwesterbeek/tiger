@@ -21,18 +21,19 @@ This repository contains a reproducibility study and diversity-focused extension
 
 ## 📊 Summary of Results
 
-
 ### Reproducibility
-- The study was unable to reproduce the results for TIGER and the achieved results were nearly half of the numbers reported in the paper. A lack of open-source implemntation, and relying on a third party codebase further affects reproducibility.
-- We believe that this underscores the need for good reproducibility/transparency practices in the research community.
-- Only S3Rec showed reproducible results.
+
+* **TIGER** results could not be reproduced: our Recall\@5/10 and NDCG\@5/10 on Amazon Beauty, Sports, and Toys are significantly lower than reported, likely due to RQ-VAE instability and missing hyperparameter details.
+* **S3Rec** was the only model to consistently match reported results.
+* **SASRec** showed unexpectedly high scores across datasets, suggesting potential variation in evaluation or preprocessing.
+* On two new subsets (Amazon Office Products and Pet Supplies), **TIGER**'s accuracy remained similarly low, while ILD/Gini trends aligned with previous datasets.
+* These findings highlight the importance of transparency and robust reproducibility practices in recommender system research.
 
 ### Extensions
 
-- Diverse Beam Search provides a tradeoff between recall@k and NDCG@k vs diversity for the user, without harming retrieval metrics by a significantly. With the proposed approach, we also achieve a faster time for inference.
-- In contrast to this, entropy-based regularization showed limited effectiveness, possibly due to minimal fine-tuning of hyperparameters.
-- The model is now benchmarked for 2 additional Datasets, Amazon Pet Supplies and Office Products.
-
+* **Diverse Beam Search** (G=4, B=16) offered a strong tradeoff between accuracy and diversity. For instance, on Amazon Beauty, ILD\@10 improved from 0.6919 to 0.9517 with only minor drops in Recall/NDCG and reduced inference time.
+* **Entropy Regularization** (α=0.25) introduced diversity during training via a loss term but led to only marginal and inconsistent gains (e.g., Beauty ILD\@10 +0.0007) and occasional degradation on datasets like Sports and Pets.
+* The model is now benchmarked on two additional datasets (Office Products, Pet Supplies), further evaluating its generalization capabilities.
 
 ---
 
